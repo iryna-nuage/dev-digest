@@ -5,13 +5,15 @@ export const NO_VALUE = "—";
 
 /**
  * USD cost for dense UI. Precision scales with magnitude so tiny per-run costs
- * stay readable: `$0.0013`, `$0.014`, `$1.24`. Null → "—"; a known 0 → "$0.00".
+ * stay comparable with OpenRouter logs: sub-cent values keep up to 6 decimals
+ * without trailing zeros (`$0.000722`, `$0.0013`), then `$0.014`, `$1.24`.
+ * Null → "—"; a known 0 → "$0.00".
  */
 export function formatUsd(usd: number | null | undefined): string {
   if (usd == null || !Number.isFinite(usd)) return NO_VALUE;
   if (usd === 0) return "$0.00";
-  if (usd < 0.0001) return "<$0.0001";
-  if (usd < 0.01) return `$${usd.toFixed(4)}`;
+  if (usd < 0.000001) return "<$0.000001";
+  if (usd < 0.01) return `$${usd.toFixed(6).replace(/0+$/, "")}`;
   if (usd < 1) return `$${usd.toFixed(3)}`;
   return `$${usd.toFixed(2)}`;
 }
