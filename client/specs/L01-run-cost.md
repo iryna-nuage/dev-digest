@@ -48,8 +48,8 @@ type RunCostBadgeProps = {
 |---|---|
 | `null` / `undefined` | `—` |
 | `0` | `$0.00` (known zero, e.g. a free model) |
-| `0 < x < 0.0001` | `<$0.0001` |
-| `0.0001 ≤ x < 0.01` | 4 decimals — `$0.0013` |
+| `0 < x < 0.000001` | `<$0.000001` |
+| `0.000001 ≤ x < 0.01` | up to 6 decimals, trailing zeros trimmed — `$0.000722`, `$0.0013`, `$0.002` (matches OpenRouter logs) |
 | `0.01 ≤ x < 1` | 3 decimals — `$0.014` |
 | `x ≥ 1` | 2 decimals — `$1.24` |
 
