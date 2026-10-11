@@ -6,6 +6,15 @@ Local-first AI PR reviewer. Course starter: Part-0 works end to end; each lesson
 Search the relevant package's `docs/`, `specs/` and `INSIGHTS.md` first — they are curated
 and may already answer the question — then read code.
 
+## Insights loop (mandatory)
+Each package keeps non-obvious findings in its `INSIGHTS.md` (`server/` also covers repo-intel).
+- Before acting on a request: invoke the `engineering-insights` skill and read the
+  `INSIGHTS.md` of every package the request touches or asks about. Treat entries as
+  high-confidence guidance; verify one cheaply before relying on it for a decision.
+- When work uncovers something substantive and new, and at the end of every non-trivial
+  task before reporting it done: append it via the skill, after re-reading the file —
+  already there → don't write. Nothing substantive → write nothing.
+
 ## Conventions (not obvious from code)
 - Not a monorepo workspace: each package has its own `package.json`/lockfile; cross-package
   code is shared via tsconfig path aliases to raw `.ts`.
