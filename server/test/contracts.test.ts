@@ -12,9 +12,12 @@ import {
   EvalRun,
   MemoryItem,
   RunTrace,
+  RunStats,
+  RunSummary,
   Settings,
   Repo,
   PrDetail,
+  PrMeta,
 } from '@devdigest/shared';
 
 /**
@@ -166,6 +169,32 @@ describe('AI contracts parse fixtures', () => {
       log: [{ t: '00.00', kind: 'info', msg: 'started' }],
     });
     expect(trace.tool_calls).toHaveLength(1);
+    // Traces stored before L01 have no cost — they must keep parsing.
+    expect(trace.stats.cost_usd).toBeUndefined();
+  });
+
+  it('L01 run cost: RunStats / RunSummary / PrMeta carry cost_usd', () => {
+    expect(
+      RunStats.parse({ duration_ms: 1, tokens_in: 1, tokens_out: 1, cost_usd: 0.06, findings: 0, grounding: '0/0 passed' })
+        .cost_usd,
+    ).toBe(0.06);
+    expect(RunStats.parse({ duration_ms: 1, tokens_in: 1, tokens_out: 1, cost_usd: null, findings: 0, grounding: '' }).cost_usd).toBeNull();
+
+    const summary = {
+      run_id: 'r1', agent_id: null, agent_name: null, provider: null, model: null, status: 'failed',
+      error: 'quota', duration_ms: 1, tokens_in: 0, tokens_out: 0, findings_count: 0,
+      grounding: null, ran_at: null, score: null, blockers: null,
+    };
+    expect(RunSummary.parse({ ...summary, cost_usd: null }).cost_usd).toBeNull();
+    expect(RunSummary.parse({ ...summary, cost_usd: 0.0013 }).cost_usd).toBe(0.0013);
+    expect(() => RunSummary.parse(summary)).toThrow(); // required (nullable) on run history
+
+    const pr = {
+      number: 1, title: 't', author: 'a', branch: 'b', base: 'main', head_sha: 'x',
+      additions: 0, deletions: 0, files_count: 0, status: 'needs_review',
+    };
+    expect(PrMeta.parse({ ...pr, cost_usd: 0.012 }).cost_usd).toBe(0.012);
+    expect(PrMeta.parse(pr).cost_usd).toBeUndefined(); // list-only field
   });
 });
 

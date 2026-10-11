@@ -59,6 +59,7 @@ export async function listRunsForPull(
     duration_ms: run.durationMs,
     tokens_in: run.tokensIn,
     tokens_out: run.tokensOut,
+    cost_usd: run.costUsd,
     findings_count: run.findingsCount,
     grounding: run.grounding,
     ran_at: run.ranAt ? run.ranAt.toISOString() : null,
@@ -121,6 +122,11 @@ export async function createAgentRun(
     prId: string;
     provider: string | null;
     model: string | null;
+    /**
+     * Groups the runs of one `POST /pulls/:id/review` into a review batch — the
+     * PR list's COST is the cost of the latest batch. Null = not part of a batch.
+     */
+    reviewBatchId?: string | null;
   },
 ): Promise<string> {
   const [row] = await db
@@ -131,6 +137,7 @@ export async function createAgentRun(
       prId: values.prId,
       provider: values.provider,
       model: values.model,
+      reviewBatchId: values.reviewBatchId ?? null,
       status: 'running',
       source: 'local',
     })
@@ -148,6 +155,8 @@ export async function completeAgentRun(
     tokensOut: number;
     findingsCount: number;
     grounding: string;
+    /** USD cost from the engine; null when unknown and on failed/cancelled runs. */
+    costUsd?: number | null;
     /** Review score (0-100); null on failed/cancelled runs. */
     score?: number | null;
     /** Findings that tripped the agent's gate; 0 on failed/cancelled runs. */
@@ -165,6 +174,7 @@ export async function completeAgentRun(
       tokensOut: values.tokensOut,
       findingsCount: values.findingsCount,
       grounding: values.grounding,
+      costUsd: values.costUsd ?? null,
       score: values.score ?? null,
       blockers: values.blockers ?? null,
       error: values.error ?? null,

@@ -37,6 +37,16 @@ What: `useContextFiles` and `useReindexContext` call `/repos/:id/context` and
 Where: src/lib/hooks/core.ts:123-137
 Status: scaffolding for L05
 
+### 2026-10-11 · tests · Components using `RunCostBadge` need the `common` namespace in tests
+What: component tests wrap in `NextIntlClientProvider` with ONLY the feature namespace
+(`{ prReview: messages }`, `{ runs: messages }`). `RunCostBadge` calls
+`useTranslations("common")` for its "Cost unknown" tooltip, so `PRRow` / `RunHistory` tests must
+also pass `common` (`messages/en/common.json`) or the tooltip resolves to a missing key.
+Do: ALWAYS add every namespace a rendered child uses to the test provider, not just the
+component's own.
+Where: src/components/run-cost-badge/RunCostBadge.tsx · src/app/repos/[repoId]/pulls/[number]/_components/RunHistory/RunHistory.test.tsx
+Status: by design
+
 ## Tool & Library Notes
 
 ## Recurring Errors & Fixes
