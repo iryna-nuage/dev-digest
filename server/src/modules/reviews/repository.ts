@@ -144,6 +144,8 @@ export class ReviewRepository {
     prId: string;
     provider: string | null;
     model: string | null;
+    /** Shared by every run of one review launch (see run.repo `createAgentRun`). */
+    reviewBatchId?: string | null;
   }): Promise<string> {
     return runRepo.createAgentRun(this.db, values);
   }
@@ -157,6 +159,8 @@ export class ReviewRepository {
       tokensOut: number;
       findingsCount: number;
       grounding: string;
+      /** USD cost from the engine; null when unknown and on failed/cancelled runs. */
+      costUsd?: number | null;
       /** Review score (0-100); null on failed/cancelled runs. */
       score?: number | null;
       /** Findings that tripped the agent's gate; 0 on failed/cancelled runs. */

@@ -119,6 +119,9 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
         git: new MockGitClient({ diff: DIFF }),
         llm: {
           [provider]: new MockLLMProvider(provider, { structured }),
+          // Seeded agents use `openrouter`, and config loads server/.env (dotenv) —
+          // without this mock, "run all" would call the real OpenRouter API.
+          openrouter: new MockLLMProvider('openai', { structured }),
         },
       },
     });
@@ -297,6 +300,75 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     ).json();
     // seed has 2 enabled agents; we may have created more above in this PR's ws.
     expect(body.runs.length).toBeGreaterThanOrEqual(2);
+
+    // L01: every run of one launch shares a single review_batch_id (rows are
+    // created synchronously before the response, so no wait is needed).
+    const rows = await pg.handle.db.select().from(t.agentRuns).where(eq(t.agentRuns.prId, pr.id));
+    expect(rows).toHaveLength(body.runs.length);
+    const batches = new Set(rows.map((r) => r.reviewBatchId));
+    expect(batches.size).toBe(1);
+    expect([...batches][0]).toBeTruthy();
+    await app.close();
+  });
+
+  it('L01 cost: runs persist cost_usd; the PR list prices only the latest finished batch', async () => {
+    const app = await appWith(REVIEW_FIXTURE);
+    const { repo, pr } = await setupRepoAndPr(pg.handle.db, workspaceId);
+    const agent = (
+      await app.inject({
+        method: 'POST',
+        url: '/agents',
+        payload: { name: 'CostAgent', provider: 'openai', model: 'gpt-4.1', system_prompt: 's' },
+      })
+    ).json();
+    const listCost = async () => {
+      const list = (await app.inject({ method: 'GET', url: `/repos/${repo.id}/pulls` })).json();
+      return list.find((p: { id: string }) => p.id === pr.id).cost_usd;
+    };
+
+    // Launch 1 — MockLLMProvider reports costUsd 0.001 per call.
+    const first = (
+      await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } })
+    ).json();
+    await waitForPrRuns(pg.handle.db, pr.id, { expected: 1 });
+    const runId = first.runs[0].run_id;
+
+    const [row] = await pg.handle.db.select().from(t.agentRuns).where(eq(t.agentRuns.id, runId));
+    expect(row!.costUsd).toBeCloseTo(0.001, 10);
+    expect(row!.reviewBatchId).toBeTruthy();
+
+    const history = (await app.inject({ method: 'GET', url: `/pulls/${pr.id}/runs` })).json();
+    expect(history[0].cost_usd).toBeCloseTo(0.001, 10);
+    const trace = (await app.inject({ method: 'GET', url: `/runs/${runId}/trace` })).json();
+    expect(trace.stats.cost_usd).toBeCloseTo(0.001, 10);
+
+    // Launch 2 — a new batch; the list shows its cost only, not the PR history sum.
+    await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } });
+    const runs = await waitForPrRuns(pg.handle.db, pr.id, { expected: 2 });
+    expect(new Set(runs.map((r) => r.reviewBatchId)).size).toBe(2);
+    expect(await listCost()).toBeCloseTo(0.001, 10);
+
+    // A run of the latest batch still running → "—" (null) until the batch finishes.
+    const latest = runs.find((r) => r.id !== runId)!;
+    const [pending] = await pg.handle.db
+      .insert(t.agentRuns)
+      .values({
+        workspaceId,
+        prId: pr.id,
+        reviewBatchId: latest.reviewBatchId,
+        ranAt: latest.ranAt,
+        status: 'running',
+      })
+      .returning();
+    expect(await listCost()).toBeNull();
+
+    // It fails (no cost) → batch finished → sum of the known costs.
+    await pg.handle.db
+      .update(t.agentRuns)
+      .set({ status: 'failed', costUsd: null })
+      .where(eq(t.agentRuns.id, pending!.id));
+    expect(await listCost()).toBeCloseTo(0.001, 10);
+
     await app.close();
   });
 });
