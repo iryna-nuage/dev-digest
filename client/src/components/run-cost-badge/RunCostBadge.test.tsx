@@ -17,8 +17,17 @@ describe("formatUsd", () => {
     [null, "—"],
     [undefined, "—"],
     [0, "$0.00"],
-    [0.00004, "<$0.0001"],
+    [0.0000004, "<$0.000001"],
+    [0.000001, "$0.000001"],
+    // sub-cent values keep up to 6 decimals, no trailing zeros — match OpenRouter logs
+    [0.000722, "$0.000722"],
+    [0.000356, "$0.000356"],
+    [0.000456, "$0.000456"],
+    [0.00004, "$0.00004"],
     [0.0013, "$0.0013"],
+    [0.002, "$0.002"],
+    [0.0099999, "$0.01"],
+    [0.014, "$0.014"],
     [0.0123, "$0.012"],
     [0.06, "$0.060"],
     [1.239, "$1.24"],
@@ -69,7 +78,7 @@ describe("RunCostBadge", () => {
     expect(renderBadge({ variant: "detailed", costUsd: null, tokensIn: 0, tokensOut: 0 })).toHaveTextContent(/^—$/);
     cleanup();
     expect(renderBadge({ variant: "detailed", costUsd: 0.002, tokensIn: null, tokensOut: null })).toHaveTextContent(
-      /^\$0\.0020$/,
+      /^\$0\.002$/,
     );
   });
 
