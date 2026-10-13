@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { RunTrace } from "@devdigest/shared";
+import type { FindingRecord, RunTrace } from "@devdigest/shared";
 import messages from "../../../../../../../../messages/en/runs.json"; // apps/web/messages/en/runs.json
 
 // Mock the trace hooks so the drawer renders without a query client / SSE.
@@ -57,6 +57,32 @@ describe("A5 Run Trace drawer (smoke)", () => {
     fireEvent.click(screen.getByText("log"));
     // LiveLogStream renders its filter input
     expect(screen.getByPlaceholderText("Filter log…")).toBeInTheDocument();
+  });
+});
+
+describe("HW1 criterion 23 — findings in the trace drawer (regression)", () => {
+  it("lists the run's findings next to the stats (FC11)", () => {
+    const findings: FindingRecord[] = [
+      {
+        id: "f1", severity: "CRITICAL", category: "security", title: "Hardcoded Stripe secret key",
+        file: "src/config.ts", start_line: 12, end_line: 12, rationale: "A live key is committed.",
+        suggestion: null, confidence: 0.98, kind: "finding", trifecta_components: null, evidence: null,
+        review_id: "rv1", accepted_at: null, dismissed_at: null,
+      },
+      {
+        id: "f2", severity: "WARNING", category: "perf", title: "N+1 query in user list endpoint",
+        file: "src/api/users.ts", start_line: 45, end_line: 52, rationale: "One query per user.",
+        suggestion: null, confidence: 0.86, kind: "finding", trifecta_components: null, evidence: null,
+        review_id: "rv1", accepted_at: null, dismissed_at: null,
+      },
+    ];
+    renderWithIntl(
+      <RunTraceDrawer runId="r1" agentName="Security" prNumber={482} findings={findings} onClose={() => {}} />,
+    );
+    expect(screen.getByText("Hardcoded Stripe secret key")).toBeInTheDocument();
+    expect(screen.getByText("N+1 query in user list endpoint")).toBeInTheDocument();
+    expect(screen.getByText("src/api/users.ts:45-52")).toBeInTheDocument();
+    expect(screen.getByText("COST")).toBeInTheDocument(); // stats still there alongside
   });
 });
 
