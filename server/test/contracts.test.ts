@@ -18,6 +18,7 @@ import {
   Repo,
   PrDetail,
   PrMeta,
+  PrFindingPreview,
 } from '@devdigest/shared';
 
 /**
@@ -195,6 +196,22 @@ describe('AI contracts parse fixtures', () => {
     };
     expect(PrMeta.parse({ ...pr, cost_usd: 0.012 }).cost_usd).toBe(0.012);
     expect(PrMeta.parse(pr).cost_usd).toBeUndefined(); // list-only field
+  });
+
+  it('HW1 findings by severity: PrMeta carries latest_findings (nullish)', () => {
+    const pr = {
+      number: 1, title: 't', author: 'a', branch: 'b', base: 'main', head_sha: 'x',
+      additions: 0, deletions: 0, files_count: 0, status: 'needs_review',
+    };
+    const preview = {
+      id: 'f1', severity: 'CRITICAL', category: 'security', title: 'Secret', file: 'src/config.ts',
+      start_line: 12, end_line: 12, confidence: 0.98, rationale: 'A key is committed.',
+    };
+    expect(PrMeta.parse({ ...pr, latest_findings: [preview] }).latest_findings).toEqual([preview]);
+    expect(PrMeta.parse({ ...pr, latest_findings: null }).latest_findings).toBeNull();
+    expect(PrMeta.parse({ ...pr, latest_findings: [] }).latest_findings).toEqual([]);
+    expect(PrMeta.parse(pr).latest_findings).toBeUndefined(); // FS9: absent still parses
+    expect(() => PrFindingPreview.parse({ ...preview, severity: 'INFO' })).toThrow();
   });
 });
 

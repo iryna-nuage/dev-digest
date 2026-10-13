@@ -76,6 +76,44 @@ describe("RunHistory — outcome badge", () => {
   });
 });
 
+describe("RunHistory — HW1 severity icons (criterion 16, summary only)", () => {
+  function renderWithCounts(r: RunSummary, severityByRun?: Record<string, { CRITICAL: number; WARNING: number; SUGGESTION: number }>) {
+    return render(
+      <NextIntlClientProvider locale="en" messages={{ prReview: messages, common }}>
+        <RunHistory runs={[r]} onOpenTrace={() => {}} severityByRun={severityByRun} />
+      </NextIntlClientProvider>,
+    );
+  }
+
+  it("a done run shows its severity icons + blockers, none clickable (FC5)", () => {
+    renderWithCounts(run({ status: "done", findings_count: 3, blockers: 2, score: 38 }), {
+      "run-1": { CRITICAL: 2, WARNING: 1, SUGGESTION: 0 },
+    });
+    const icons = screen.getByTestId("severity-icon-counts");
+    expect(icons.querySelector('[data-severity="CRITICAL"]')).toHaveTextContent("2");
+    expect(icons.querySelector('[data-severity="WARNING"]')).toHaveTextContent("1");
+    expect(icons.querySelector('[data-severity="SUGGESTION"]')).toBeNull();
+    expect(icons.closest("button")).toBeNull();
+    expect(icons.querySelector("button")).toBeNull();
+    expect(screen.getByText(/2 blockers/)).toBeInTheDocument();
+    expect(screen.queryByText(/finding\(s\)/)).not.toBeInTheDocument();
+  });
+
+  it("no review for the run → the plain finding count (fallback)", () => {
+    renderWithCounts(run({ status: "done", findings_count: 3, blockers: 0, score: 70 }), {});
+    expect(screen.queryByTestId("severity-icon-counts")).not.toBeInTheDocument();
+    expect(screen.getByText("3 finding(s)")).toBeInTheDocument();
+  });
+
+  it("a review with zero findings → '0 finding(s)'", () => {
+    renderWithCounts(run({ status: "done", findings_count: 0, blockers: 0, score: 95 }), {
+      "run-1": { CRITICAL: 0, WARNING: 0, SUGGESTION: 0 },
+    });
+    expect(screen.queryByTestId("severity-icon-counts")).not.toBeInTheDocument();
+    expect(screen.getByText("0 finding(s)")).toBeInTheDocument();
+  });
+});
+
 describe("RunHistory — L01 run cost badge", () => {
   it("a finished run shows total tokens · cost next to the time (C3)", () => {
     renderRuns([run({ status: "done", tokens_in: 8200, tokens_out: 919, cost_usd: 0.0013, score: 90, blockers: 0 })]);

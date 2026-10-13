@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Badge, Icon, CircularScore, type IconName } from "@devdigest/ui";
 import type { RunSummary, PrCommit } from "@devdigest/shared";
 import { RunCostBadge } from "@/components/run-cost-badge";
+import { SeverityIconCounts, totalOf, type SeverityCounts } from "@/components/severity-counts";
 
 /**
  * PR timeline — every agent run interleaved with the PR's commits, newest-first
@@ -91,9 +92,12 @@ export function RunHistory({
   onOpenTrace,
   onGoToReview,
   onDelete,
+  severityByRun,
 }: {
   runs: RunSummary[];
   commits?: PrCommit[];
+  /** run_id → findings per severity of that run's review (summary icons). */
+  severityByRun?: Record<string, SeverityCounts>;
   /** Open the trace + log drawer for a run (the logs icon). */
   onOpenTrace: (runId: string) => void;
   /** Jump to this run's inline review accordion below (clicking the agent name). */
@@ -149,6 +153,7 @@ export function RunHistory({
 
         const r = item.run;
         const o = outcomeOf(r);
+        const severityCounts = severityByRun?.[r.run_id];
         const settled = r.status === "done";
         return (
           <div key={`run:${r.run_id}`} style={rowStyle}>
@@ -190,9 +195,17 @@ export function RunHistory({
                 </div>
               )}
               {settled && (
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  {t("runStatus.findings", { count: r.findings_count ?? 0 })}
-                  {(r.blockers ?? 0) > 0 ? t("runStatus.blockers", { count: r.blockers ?? 0 }) : ""}
+                <div style={{ display: "flex", alignItems: "center", fontSize: 12, color: "var(--text-muted)" }}>
+                  {/* Summary only (HW1 criterion 16): severity icons, not clickable.
+                      No review for the run, or zero findings → the plain count. */}
+                  {severityCounts && totalOf(severityCounts) > 0 ? (
+                    <SeverityIconCounts counts={severityCounts} size={12.5} />
+                  ) : (
+                    t("runStatus.findings", { count: r.findings_count ?? 0 })
+                  )}
+                  {(r.blockers ?? 0) > 0 ? (
+                    <span style={{ whiteSpace: "pre" }}>{t("runStatus.blockers", { count: r.blockers ?? 0 })}</span>
+                  ) : null}
                 </div>
               )}
             </div>

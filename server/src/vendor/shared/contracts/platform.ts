@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Provider } from './knowledge.js';
+import { Severity, FindingCategory } from './findings.js';
 
 /**
  * Platform / scaffolding DTOs owned by F1:
@@ -154,6 +155,20 @@ export type Repo = z.infer<typeof Repo>;
 export const PrStatus = z.enum(['needs_review', 'reviewed', 'stale', 'open', 'closed', 'merged']);
 export type PrStatus = z.infer<typeof PrStatus>;
 
+/** Read-only preview of one finding for the PR-list FINDINGS popover. */
+export const PrFindingPreview = z.object({
+  id: z.string(),
+  severity: Severity,
+  category: FindingCategory,
+  title: z.string(),
+  file: z.string(),
+  start_line: z.number().int(),
+  end_line: z.number().int(),
+  confidence: z.number(),
+  rationale: z.string(), // markdown, sent in full; the client clamps it
+});
+export type PrFindingPreview = z.infer<typeof PrFindingPreview>;
+
 export const PrMeta = z.object({
   id: z.string().nullish(),
   number: z.number().int(),
@@ -173,6 +188,10 @@ export const PrMeta = z.object({
   // Cost (USD) of the latest review batch (list endpoint only); null while that
   // batch is still running, when no run in it has a known cost, or never reviewed.
   cost_usd: z.number().nullish(),
+  // Findings of the latest review run (list endpoint only; read-only popover).
+  // null/absent = nothing to show (never reviewed, or the latest batch has no
+  // persisted review yet). Rule: server/specs/L01-findings-severity.md.
+  latest_findings: z.array(PrFindingPreview).nullish(),
 });
 export type PrMeta = z.infer<typeof PrMeta>;
 
