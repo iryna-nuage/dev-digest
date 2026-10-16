@@ -33,5 +33,7 @@ Search `server/docs/`, `server/specs/`, `server/INSIGHTS.md` first.
 ## Use when
 - Env vars, DI flow, API map, review-context notes → read `server/README.md`
 - Indexing / repo-intel facade → read `server/src/modules/repo-intel/README.md`
-- Deep-dives → read `server/docs/` · feature specs → read `server/specs/` ·
-  known bugs and findings → read `server/INSIGHTS.md`
+- Boot, module layering, repo / PR-list / review-run data flows → read `server/docs/data-flow.md`
+- Feature contracts → read `server/specs/L01-run-cost.md` (run cost, PR-list cost) ·
+  `server/specs/L01-findings-severity.md` (PR-list latest findings)
+- Known bugs and findings → read `server/INSIGHTS.md`
