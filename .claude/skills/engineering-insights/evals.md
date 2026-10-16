@@ -5,6 +5,9 @@ agent under test must not see this conversation), then check the expected behavi
 Repeat on Sonnet and Haiku as well as Opus — a skill that works on one model can under-trigger on
 another.
 
+The validator itself has an automated self-test:
+`node --test .claude/skills/engineering-insights/scripts/check-insights.test.mjs`.
+
 After every scenario:
 - `node .claude/skills/engineering-insights/scripts/check-insights.mjs` passes;
 - `git diff -- '*INSIGHTS.md'` shows only added lines (plus text appended to a `Status:` line);
@@ -23,8 +26,9 @@ flows against a local stack and fix what blocks them").
 Expected:
 - each confirmed, non-obvious finding is appended to `e2e/INSIGHTS.md` (or the module whose code it
   is about), at the end of the matching section;
-- new entries have `What:` / `Do:` / `Where:` / `Status:`, a title stated as a rule, an absolute date;
-- a Session Note is added because other entries were;
+- new entries have `What:` / `Do:` / `Where:` (with at least one `path:line`) / `Status:`, a title
+  stated as a rule, an absolute date;
+- a Session Note is added because other entries were, with its own `Where: path:line`;
 - the final answer lists one line per entry: `file · section · title`.
 
 ## 3. Trivial task → nothing

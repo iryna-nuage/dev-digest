@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Validates module INSIGHTS.md files: fixed sections, entry shape, append-only against git HEAD.
+// Validates module INSIGHTS.md files: fixed sections, entry shape, `path:line` evidence in every
+// dated entry (Session Notes included), append-only against git HEAD.
 // Usage: node .claude/skills/engineering-insights/scripts/check-insights.mjs [--skip-append-check] [file ...]
 // Exit code 1 on errors; warnings never fail.
 import { existsSync, readFileSync } from 'node:fs';
@@ -24,6 +25,23 @@ const MAX_PER_FILE = 150;
 
 const ENTRY = /^### (\d{4}-\d{2}-\d{2}) · [^·]+ · .+$/;
 const SESSION_NOTE = /^### (\d{4}-\d{2}-\d{2}) · .+$/;
+// Evidence: every dated entry (Session Notes included) needs `Where:` with at least one
+// `path:line` or `path:start-end`. A path has a directory or a file extension.
+const PATH = String.raw`(?:(?:[\w@.[\]-]+\/)+[\w@.[\]-]+|[\w@[\]-]+(?:\.[\w-]+)+)`;
+const FILE_LINE = new RegExp(String.raw`(?:^|[\s\`(·↔,])${PATH}:\d+(?:-\d+)?(?=$|[\s\`),·;])`);
+const FIELD = /^(What|Do|Where|Status):/;
+
+/** The `Where:` value, including wrapped continuation lines; null when there is no `Where:`. */
+function whereValue(body) {
+  const i = body.findIndex((l) => l.startsWith('Where:'));
+  if (i < 0) return null;
+  const parts = [body[i].slice('Where:'.length)];
+  for (const l of body.slice(i + 1)) {
+    if (!l || FIELD.test(l)) break;
+    parts.push(l);
+  }
+  return parts.join(' ');
+}
 
 function git(args, cwd) {
   try {
@@ -47,11 +65,16 @@ function checkStructure(rel, lines, errors, warnings) {
   const counts = new Map();
   const titles = new Map();
   const finish = () => {
-    if (!entry || entry.section === 'Session Notes') return;
-    const need = ['What:', 'Where:', 'Status:'];
-    if (entry.date >= DO_REQUIRED_FROM) need.splice(1, 0, 'Do:');
+    if (!entry) return;
+    const sessionNote = entry.section === 'Session Notes';
+    const need = sessionNote ? ['Where:'] : ['What:', 'Where:', 'Status:'];
+    if (!sessionNote && entry.date >= DO_REQUIRED_FROM) need.splice(1, 0, 'Do:');
     for (const key of need) {
       if (!entry.body.some((l) => l.startsWith(key))) errors.push(`${rel}:${entry.line} entry missing "${key}"`);
+    }
+    const where = whereValue(entry.body);
+    if (where !== null && !FILE_LINE.test(where)) {
+      errors.push(`${rel}:${entry.line} "Where:" needs at least one path:line (e.g. src/foo.ts:42)`);
     }
   };
 
