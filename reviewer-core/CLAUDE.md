@@ -12,5 +12,8 @@ Search `reviewer-core/docs/`, `reviewer-core/specs/`, `reviewer-core/INSIGHTS.md
 
 ## Use when
 - Pipeline, public API, tests → read `reviewer-core/README.md`
-- Deep-dives → read `reviewer-core/docs/` · specs → read `reviewer-core/specs/` ·
-  findings → read `reviewer-core/INSIGHTS.md`
+- Step-by-step data flow, boundaries, how the server calls it → read
+  `reviewer-core/docs/pipeline.md`
+- Engine invariants (mode, grounding, score, cost, cancellation, prompt safety, blockers) → read
+  `reviewer-core/specs/review-engine.md`
+- Findings → read `reviewer-core/INSIGHTS.md`

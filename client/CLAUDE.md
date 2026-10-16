@@ -16,5 +16,8 @@ Search `client/docs/`, `client/specs/`, `client/INSIGHTS.md` first.
 ## Use when
 - Page/route map, commands → read `client/README.md`
 - UI primitives → read `client/src/vendor/ui/README.md`
-- Deep-dives → read `client/docs/` · UI/flow specs → read `client/specs/` ·
-  findings → read `client/INSIGHTS.md`
+- Server/Client boundary, data flow (hooks → `api.ts` → API), where code goes → read
+  `client/docs/ui-architecture.md`
+- Feature behaviour → read `client/specs/L01-run-cost.md` (cost badge placements) ·
+  `client/specs/L01-findings-severity.md` (severity counters, filter, findings popovers)
+- Findings → read `client/INSIGHTS.md`
