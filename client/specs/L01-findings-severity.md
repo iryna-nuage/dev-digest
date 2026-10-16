@@ -152,7 +152,7 @@ Upper-case strings are literal, not CSS `text-transform`, so DOM text, `innerTex
 - Clickable Timeline icons (criterion 16 says no click) — the Timeline popover is hover / focus only.
 - A page-level filter across runs; persisting the filter in the URL.
 - Any change to the trace API or drawer layout.
-- The unrelated L01 acceptance gaps (cost rule, CLAUDE.md sections, docs/specs stubs).
+- Unrelated L01 work (run cost, CLAUDE.md, package docs/specs) — covered by their own specs and docs.
 
 ## Acceptance criteria
 
@@ -190,9 +190,9 @@ Upper-case strings are literal, not CSS `text-transform`, so DOM text, `innerTex
 - `RunTraceDrawer.test.tsx`: a regression assertion that the passed findings render in the drawer
   (FC11).
 
-## e2e (`e2e/specs/08-pr-severity.flow.json`, seeded PR #482, no model call)
+## e2e (`e2e/specs/08-pr-severity-filter.flow.json`, seeded PR #482, no model call)
 
-PR list → hover the #482 FINDINGS icons → `2 FINDINGS IN THIS RUN` → open the PR → Agent runs →
-`1 CRITICAL` → click **Critical** → `Hardcoded Stripe secret key in commit` still visible → click
-**Critical** again → `N+1 query in user list endpoint` visible. Asserting that a card disappears needs
-`wait --fn`. Use it only if agent-browser supports it; otherwise the RTL tests cover it.
+PR list → open PR #482 → Agent runs → `1 CRITICAL` and `1 WARNING` pills → click **Critical** →
+`Hardcoded Stripe secret key in commit` still visible → click **Critical** again →
+`N+1 query in user list endpoint` visible. The flow has no hover step and doesn't assert that a card
+disappears: the PR-list popover (FC6–FC7) and card hiding (FC3) are covered by the RTL tests above.
