@@ -5,7 +5,7 @@ import { Icon, Badge, Button, SectionLabel, EmptyState } from "@devdigest/ui";
 import { RunStatus } from "../RunStatus";
 import { RunHistory } from "../RunHistory/RunHistory";
 import { ReviewRunAccordion } from "../ReviewRunAccordion";
-import { countBySeverity, type SeverityCounts } from "@/components/severity-counts";
+import { visibleFindings } from "../FindingsPanel/helpers";
 import { s } from "./styles";
 import type { FindingRecord, ReviewRecord, RunSummary, PrCommit } from "@devdigest/shared";
 import type { UseMutationResult } from "@tanstack/react-query";
@@ -69,12 +69,13 @@ export function FindingsTab({
   // scroll even when the same run is clicked twice.
   const [target, setTarget] = React.useState<{ runId: string; n: number } | null>(null);
 
-  // Timeline severity icons: count each run's persisted findings (joined by
-  // run_id) — no extra request, no model call.
-  const severityByRun = React.useMemo(() => {
-    const out: Record<string, SeverityCounts> = {};
+  // Timeline severity icons + hover preview: each run's persisted findings
+  // (joined by run_id), in the order of that run's Review runs card — no extra
+  // request, no model call.
+  const findingsByRun = React.useMemo(() => {
+    const out: Record<string, FindingRecord[]> = {};
     for (const review of runs) {
-      if (review.run_id) out[review.run_id] = countBySeverity(review.findings);
+      if (review.run_id) out[review.run_id] = visibleFindings(review.findings, false);
     }
     return out;
   }, [runs]);
@@ -145,7 +146,7 @@ export function FindingsTab({
             onOpenTrace={handleOpenTrace}
             onGoToReview={handleGoToReview}
             onDelete={handleDelete}
-            severityByRun={severityByRun}
+            findingsByRun={findingsByRun}
           />
         </div>
       )}

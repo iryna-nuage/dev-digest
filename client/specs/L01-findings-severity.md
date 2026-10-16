@@ -1,9 +1,9 @@
 # L01 — Findings by severity (client)
 
 HW1 criteria 16–23: severity counters and a severity filter in the expanded Review runs card,
-summary-only severity icons in the Timeline, a FINDINGS column with a read-only
-"N FINDINGS IN THIS RUN" popover on the PR list, Accept / Reject on finding cards, and findings in the
-Trace drawer (already present). The PR-list data rule ("this run") is defined in
+non-clickable severity icons in the Timeline with a read-only findings preview on hover / focus, a
+FINDINGS column with the same read-only "N FINDINGS IN THIS RUN" popover on the PR list, Accept /
+Reject on finding cards, and findings in the Trace drawer (already present). The PR-list data rule ("this run") is defined in
 [`server/specs/L01-findings-severity.md`](../../server/specs/L01-findings-severity.md). The client never
 decides which run is the latest. It only counts and filters what it receives.
 
@@ -11,7 +11,7 @@ decides which run is the latest. It only counts and filters what it receives.
 
 | Data | Endpoint / hook | Used by |
 |---|---|---|
-| `ReviewRecord[]` with `findings[].severity` and `run_id` | `GET /pulls/:id/reviews` · `usePrReviews` (the PR page already loads it) | Review runs cards, Timeline icons, Trace drawer |
+| `ReviewRecord[]` with `findings[]` and `run_id` | `GET /pulls/:id/reviews` · `usePrReviews` (the PR page already loads it) | Review runs cards, Timeline icons + popover, Trace drawer |
 | `RunSummary[]` | `GET /pulls/:id/runs` · `usePrRuns` | Timeline rows (unchanged) |
 | `PrMeta.latest_findings` (`PrFindingPreview[] \| null`) | `GET /repos/:id/pulls` · `usePulls` | PR list FINDINGS column + popover |
 
@@ -29,6 +29,27 @@ must mirror the server copy (server spec → Contracts).
 - `SeverityIconCounts`: icon + number for every **non-zero** severity, using the `SEV` tokens from
   `@devdigest/ui` (octagon / triangle / lightbulb). Icon and number together, never colour alone. It is
   not interactive and has an `aria-label` such as "2 critical, 1 warning".
+
+## Shared: read-only findings preview popover
+
+`src/components/findings-popover/` — `FindingsPopover` (used by the Timeline and the PR list, so the
+preview exists once). It takes `findings: PrFindingPreview[]`; a `FindingRecord` is a superset, so the
+PR page passes its persisted findings as they are.
+
+- **Trigger:** `SeverityIconCounts` of `countBySeverity(findings)` — the icons are derived from the
+  same array the popover lists, so they always match. A focusable `<span tabIndex=0>` with a dotted
+  underline and the default cursor: **no `onClick`, no `button` role — it is not clickable.**
+- **Opens** on hover **or keyboard focus**. **Closes** when the pointer leaves both the trigger and
+  the popover (a short grace delay lets the pointer move into it), and on Escape, blur, page scroll or
+  resize.
+- **Header:** `N FINDINGS IN THIS RUN` (N = `findings.length`).
+- **One read-only preview per finding**, in the order given: severity icon, title, category,
+  `file:start-end` (`file:start` when equal), `NN% conf`, rationale as plain text clamped to 2 lines.
+- **No buttons, links or inputs.** Accept / Reject exist only on the Review runs cards (criterion 22).
+- Rendered through a portal with `position: fixed` under the trigger (the PR-list table card has
+  `overflow: hidden`). Max height ~360 px with internal scroll. Clicks inside stop propagation, because
+  React portals bubble to the host row's `onClick`.
+- Pure props: hover / focus never fetches and never calls an LLM.
 
 ## Placement 1 — PR page → Agent runs → Review runs → expanded run card (criteria 16–18, 22)
 
@@ -76,41 +97,33 @@ findings are cards too, so they count.
   finding reads "rejected". Only the labels change: the action stays `dismiss`, the field stays
   `dismissed_at`, and the shortcut stays `d`. The card root gets `data-severity` (used by tests).
 
-## Placement 2 — Timeline (criterion 16, summary only)
+## Placement 2 — Timeline (criterion 16: icons without a click, preview on hover)
 
 `RunHistory`, settled (`done`) run row, second line: `⊘2 ⚠1 · 2 blockers` instead of
 "N finding(s)".
 
-- Counts: `FindingsTab` builds `severityByRun` (`run_id → countBySeverity(review.findings)`) from the
-  same `ReviewRecord[]` and passes it to `RunHistory`. These are all of the run's findings (the
-  Timeline has no confidence toggle).
-- The run has no review (the review was deleted) → the existing "N finding(s)" text. A review with
-  zero findings → the existing "0 finding(s)".
-- **Not interactive:** plain `SeverityIconCounts`, with no button, no hover popover and no dotted
-  underline. The agent-name link ("jump to this run's findings") and the cost badge keep their
-  current behaviour.
+- Data: `FindingsTab` builds `findingsByRun` (`run_id → that run's review findings`) from the same
+  `ReviewRecord[]` and passes it to `RunHistory`. These are all of the run's findings (the Timeline has
+  no confidence toggle), ordered with the existing `visibleFindings(findings, false)` — the order of
+  that run's Review runs card.
+- The icons are the shared `FindingsPopover` trigger: hovering or focusing them opens the read-only
+  `N FINDINGS IN THIS RUN` preview of **that run's** findings (shared section above).
+- **Not clickable:** the icons have no click action. Clicking them does nothing — no jump to the
+  review, no trace drawer, no filter. The agent-name link ("jump to this run's findings"), the trace
+  icon and the cost badge keep their current behaviour.
+- The run has no review (the review was deleted) → the existing "N finding(s)" text, no popover. A
+  review with zero findings → the existing "0 finding(s)", no popover.
 - `running`, `failed` and `cancelled` rows and commit rows are unchanged.
 
 ## Placement 3 — PR list, FINDINGS column (criteria 20–21)
 
-`src/app/repos/[repoId]/pulls/` — `constants.ts` (`COLUMN_KEYS`, `GRID`), `styles.ts`, `PRRow`,
-`_components/FindingsPopover/`.
+`src/app/repos/[repoId]/pulls/` — `constants.ts` (`COLUMN_KEYS`, `GRID`), `styles.ts`, `PRRow`.
 
 - New column **Findings** between *Score* and *Status* (the mock order).
-- Cell: `SeverityIconCounts` of `countBySeverity(pr.latest_findings)`. `null` or `[]` → `—`, with no
-  popover.
-- **Popover** (`FindingsPopover`): opens on hover **or keyboard focus** of the icons (the trigger has
-  `tabIndex=0`).
-  - Header: **`N FINDINGS IN THIS RUN`**, where N = `latest_findings.length`.
-  - One read-only preview per finding, in server order: severity icon, title, category, `file:start-end`
-    (`file:start` when equal), `NN% conf`, rationale as plain text clamped to 2 lines.
-  - **No buttons, links or inputs.** Accept / Reject exist only on the PR page cards (criterion 22).
-  - Rendered through a portal with `position: fixed` under the trigger, because the table card has
-    `overflow: hidden`. Max height ~360 px with internal scroll.
-  - Closes when the pointer leaves both the trigger and the popover (a short grace delay lets the
-    pointer move into the popover), and on Escape, blur or page scroll.
-  - Clicks inside the popover don't navigate: React portals bubble to `PRRow`'s `onClick`, so the
-    popover stops propagation. Clicking elsewhere in the row still opens the PR.
+- Cell: the shared `FindingsPopover` with `pr.latest_findings` (server order: severity, then
+  confidence). `null` or `[]` → `—`, with no popover.
+- Clicks inside the popover don't navigate (it stops propagation); clicking elsewhere in the row still
+  opens the PR.
 - No request on hover: everything comes from the `usePulls` payload.
 
 ## Placement 4 — Trace drawer (criterion 23, existing; regression only)
@@ -128,7 +141,7 @@ and doesn't touch the trace API. A regression test pins it.
 | `severity.summaryLabel` | `{critical} critical, {warning} warning, {suggestion} suggestion` (aria-label) |
 | `panel.filterBySeverity` | `Filter by severity` (button group label) |
 | `list.columns.findings` | `Findings` |
-| `list.findingsPopover.title` | `{count, plural, one {# FINDING} other {# FINDINGS}} IN THIS RUN` |
+| `findingsPopover.title` | `{count, plural, one {# FINDING} other {# FINDINGS}} IN THIS RUN` (shared popover; was `list.findingsPopover.title`) |
 | `finding.dismiss` / `finding.dismissed` | `Reject` / `rejected` (were `Dismiss` / `dismissed`) |
 
 Upper-case strings are literal, not CSS `text-transform`, so DOM text, `innerText` and e2e all see
@@ -136,8 +149,7 @@ Upper-case strings are literal, not CSS `text-transform`, so DOM text, `innerTex
 
 ## Out of scope
 
-- Clickable Timeline icons or a Timeline popover (the design mock shows one; criterion 16 says no
-  click).
+- Clickable Timeline icons (criterion 16 says no click) — the Timeline popover is hover / focus only.
 - A page-level filter across runs; persisting the filter in the URL.
 - Any change to the trace API or drawer layout.
 - The unrelated L01 acceptance gaps (cost rule, CLAUDE.md sections, docs/specs stubs).
@@ -150,12 +162,13 @@ Upper-case strings are literal, not CSS `text-transform`, so DOM text, `innerTex
 | FC2 | 17 | Same card, with and without "Hide low confidence" | Each pill's number = cards of that severity rendered below |
 | FC3 | 18 | Click **Critical**, then **Critical** again | Only CRITICAL cards, then the run's full list again |
 | FC4 | 18 | Click **Critical**, then **Warning** | Only WARNING cards; Critical no longer pressed |
-| FC5 | 16 | Timeline, `done` run with findings | Severity icons with counts; nothing in them is clickable |
+| FC5 | 16 | Timeline, `done` run with findings | Severity icons with counts; clicking them does nothing |
+| FC12 | 16 | Timeline, hover or focus a run's icons | Popover `N FINDINGS IN THIS RUN` with **that run's** findings (icon, title, category, file:line, % conf, rationale); no buttons |
 | FC6 | 20 | PR list, hover the FINDINGS icons | Popover titled `N FINDINGS IN THIS RUN` |
 | FC7 | 21 | Same popover | Each preview shows icon, title, category, file:line, % conf, rationale; no buttons |
 | FC8 | 20 | PR list, `latest_findings` `null` or `[]` | `—`, no popover |
 | FC9 | 22 | Expanded finding card on the PR page | Buttons **Accept** and **Reject** |
-| FC10 | 19 | Opening the page, toggling filters, hovering | No extra API request, no LLM call |
+| FC10 | 19 | Opening the page, toggling filters, hovering (PR list or Timeline) | No extra API request, no LLM call |
 | FC11 | 23 | Trace drawer of a run | Its findings are listed (unchanged behaviour) |
 
 ## Tests (Vitest + RTL)
@@ -168,8 +181,9 @@ Upper-case strings are literal, not CSS `text-transform`, so DOM text, `innerTex
   `fetch` are not called while filtering (FC10).
 - `ReviewRunAccordion.test.tsx` (new): the pills follow the `VerdictBanner` in DOM order (FC1
   placement). The delete hook is mocked.
-- `RunHistory.test.tsx`: icons + blockers for a `done` run with counts (FC5), fallback text without
-  them, no severity buttons.
+- `RunHistory.test.tsx`: icons + blockers for a `done` run (FC5); the icons are not a button and a
+  click triggers neither `onGoToReview` nor `onOpenTrace`; hover / focus opens the popover with that
+  run's findings only, no buttons, no `fetch` (FC12, FC10); fallback text without findings.
 - `FindingCard.test.tsx`: the button reads "Reject" and still fires `"dismiss"` (FC9).
 - `PRRow.test.tsx`: FINDINGS cell (FC8), hover → popover title and preview fields, no buttons inside
   (FC6–FC7). The provider needs the `common` namespace (`client/INSIGHTS.md`).
