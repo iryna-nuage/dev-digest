@@ -69,7 +69,7 @@ export function PRRow({ pr, repoId }: { pr: PrMeta; repoId: string }) {
         </Badge>
       </div>
       <div>
-        {/* Latest review's cost; null ("—") while it runs or when unknown — decided server-side. */}
+        {/* Total of the PR's successful runs; null ("—") when none has a known cost — decided server-side. */}
         <RunCostBadge variant="compact" costUsd={pr.cost_usd} />
       </div>
       <div style={s.updatedCell}>{relativeTime(pr.updated_at)}</div>

@@ -11,8 +11,8 @@ empty states are covered in
 - `GET /pulls/:id/reviews` already returns every persisted finding with its `severity`, grouped by
   review, and each review carries its `run_id`. The PR detail page (Review runs cards, Timeline,
   Trace drawer) therefore needs **no server change**.
-- `GET /repos/:id/pulls` returns `score` (latest review) and `cost_usd` (latest review batch, see
-  [`L01-run-cost.md`](L01-run-cost.md)) but no findings. The old per-severity counts
+- `GET /repos/:id/pulls` returns `score` (latest review) and `cost_usd` (sum of the PR's successful
+  runs, see [`L01-run-cost.md`](L01-run-cost.md)) but no findings. The old per-severity counts
   `findings_critical/warning/suggestion` were removed on purpose in commit `e07efea`
   ("cleanup before home tasks"). `rollupSeverities` in `src/modules/pulls/status.ts` is still there but
   the list no longer uses it.
@@ -58,9 +58,9 @@ No other fields of the finding are sent (no `suggestion`, `evidence`, `trifecta_
 
 ## "Latest run" — which findings the list shows
 
-"THIS RUN" is the **latest review**: the same notion as `PrMeta.cost_usd`, i.e. every agent of
-the PR's most recent "Run Review" launch (review batch). There is one fallback, for PRs that have
-no batch:
+"THIS RUN" is the **latest review**: every agent of the PR's most recent "Run Review" launch (the
+review batch defined in [`L01-run-cost.md`](L01-run-cost.md)). There is one fallback, for PRs that
+have no batch:
 
 ```
 runs    = agent_runs (id, pr_id, review_batch_id) of the listed PRs, ORDER BY ran_at DESC
@@ -87,8 +87,7 @@ per PR: latest_findings = findings of its reviewIds, sorted by severity
 - Older batches never contribute.
 - While a batch is still running, the findings of agents that already finished are shown, because
   each review's findings are final once persisted. A batch with no persisted review yet gives
-  `null`. This deliberately differs from `cost_usd`, which stays `null` until the whole batch
-  finishes because a partial sum would be misleading.
+  `null`.
 - Accepted and dismissed findings are included, the same as in the PR page's Review runs card.
 - `[]` (a finished review with zero findings) and `null` are both valid. The client renders `—`
   for both.

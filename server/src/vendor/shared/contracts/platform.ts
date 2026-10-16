@@ -185,8 +185,9 @@ export const PrMeta = z.object({
   updated_at: z.string().nullish(),
   // Latest-review score (list endpoint only; null/absent until reviewed).
   score: z.number().int().nullish(),
-  // Cost (USD) of the latest review batch (list endpoint only); null while that
-  // batch is still running, when no run in it has a known cost, or never reviewed.
+  // Total cost (USD) of ALL the PR's successful (`done`) runs with a known cost
+  // (list endpoint only); null when there is none (never reviewed, only failed /
+  // cancelled / running runs, or unknown costs). Per-run cost lives on RunSummary.
   cost_usd: z.number().nullish(),
   // Findings of the latest review run (list endpoint only; read-only popover).
   // null/absent = nothing to show (never reviewed, or the latest batch has no

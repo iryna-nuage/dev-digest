@@ -1,7 +1,8 @@
 # L01 — Run cost (client)
 
-Show the cost (and tokens) of agent runs in three places with one `RunCostBadge` component.
-Data, persistence, review batches and the "latest review" rule are defined in
+Show the cost (and tokens) of agent runs in three places with one `RunCostBadge` component: the
+Timeline and the trace drawer show the **individual run's** cost; the PR list shows the **sum of all
+successful runs of the PR**. Data, persistence and the PR-list sum rule are defined in
 [`server/specs/L01-run-cost.md`](../../server/specs/L01-run-cost.md) — the client never recomputes
 them, it only formats what the API returns.
 
@@ -9,7 +10,7 @@ them, it only formats what the API returns.
 
 | Field | Endpoint / hook | `null` / absent means |
 |---|---|---|
-| `PrMeta.cost_usd` | `GET /repos/:id/pulls` · `usePulls` | latest review unfinished, unknown, or never reviewed |
+| `PrMeta.cost_usd` (sum of the PR's successful runs) | `GET /repos/:id/pulls` · `usePulls` | no successful run with a known cost (never reviewed, only failed / cancelled / running runs, or unknown costs) |
 | `RunSummary.cost_usd`, `tokens_in`, `tokens_out` | `GET /pulls/:id/runs` · run history hook | cost unknown (failed, cancelled, no price, pre-L01 run) |
 | `RunTrace.stats.cost_usd` | `GET /runs/:id/trace` · `useRunTrace` | same; absent on traces stored before L01 |
 
@@ -63,10 +64,12 @@ The drawer's existing `formatTokens` (`4k→0.2k`) and its separate TOKENS tile 
 `src/app/repos/[repoId]/pulls/` — `constants.ts` (`COLUMN_KEYS`, `GRID`), `PRRow`, `messages/en/prReview.json`.
 
 - New column **Cost** between *Status* and *Updated* (matches the design order).
-- Cell: `<RunCostBadge variant="compact" costUsd={pr.cost_usd} />`.
-- Shows `—` while the latest review is still running, for PRs never reviewed, for PRs whose latest
-  run is pre-L01, and when no run in the latest review has a known cost. All of that is decided by
-  the server (`cost_usd: null`); the cell does not look at run statuses.
+- Cell: `<RunCostBadge variant="compact" costUsd={pr.cost_usd} />` — the PR's total over all its
+  successful runs, e.g. `0.008296 + 0.004938 = 0.013234` renders `$0.013` (formatting table above).
+- Shows `—` when the PR has no successful run with a known cost (never reviewed, only failed /
+  cancelled runs, only unknown or pre-L01 costs). While a new review runs, the cell keeps showing the
+  total of the runs that already succeeded. All of that is decided by the server (`cost_usd`); the
+  cell does not look at run statuses.
 - No new polling: the value appears on the next `usePulls` refetch (60 s / window focus).
 
 ## Placement 2 — PR detail, Agent runs timeline
@@ -96,8 +99,8 @@ The drawer's existing `formatTokens` (`4k→0.2k`) and its separate TOKENS tile 
 
 | # | Given | Then |
 |---|---|---|
-| C1 | PR list, `cost_usd = 0.0123` | Cost cell shows `$0.012` |
-| C2 | PR list, `cost_usd = null` (in progress, never reviewed, legacy, all failed) | Cost cell shows `—`, never `$0.00` |
+| C1 | PR list, `cost_usd = 0.013234` (sum of two successful runs) | Cost cell shows `$0.013` |
+| C2 | PR list, `cost_usd = null` (never reviewed, only failed / cancelled, unknown or legacy costs) | Cost cell shows `—`, never `$0.00` |
 | C3 | Timeline, finished run with cost and tokens (`8,200 + 919`, `$0.0013`) | `9,119 tok · $0.0013` next to the time |
 | C4 | Timeline, `failed` run (cost `null`, tokens `0/0`) | `—` next to the time |
 | C5 | Timeline, `running` run | No badge |
@@ -105,7 +108,7 @@ The drawer's existing `formatTokens` (`4k→0.2k`) and its separate TOKENS tile 
 | C7 | Drawer, trace without `cost_usd` | COST tile shows `—` |
 | C8 | Any view | Rendering makes no extra API or model calls |
 
-Server-side behaviour behind C2 (which batch, when it counts as finished): server spec S6–S10.
+Server-side behaviour behind C1–C2 (which runs are summed): server spec S6–S10a.
 
 ## Tests (Vitest + RTL)
 

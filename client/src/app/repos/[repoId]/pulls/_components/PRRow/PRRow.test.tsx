@@ -1,6 +1,6 @@
 /**
- * PRRow — COST column (L01, C1–C2). The server decides the latest review's cost
- * (null while it runs / unknown / never reviewed); the row only formats it.
+ * PRRow — COST column (L01, C1–C2). The server totals the PR's successful runs
+ * (null when none has a known cost); the row only formats it.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
@@ -124,8 +124,9 @@ describe("PRRow — HW1 FINDINGS column + read-only popover (criteria 20–21)",
 });
 
 describe("PRRow — COST column", () => {
-  it("shows the latest review's cost compactly (C1)", () => {
-    expect(renderRow({ ...PR, cost_usd: 0.0123 })).toHaveTextContent(/^\$0\.012$/);
+  it("shows the PR's total over its successful runs compactly (C1)", () => {
+    // 0.008296 + 0.004938, summed on the server (criterion 12)
+    expect(renderRow({ ...PR, cost_usd: 0.013234 })).toHaveTextContent(/^\$0\.013$/);
   });
 
   it("shows — when the server has no cost, never $0.00 (C2)", () => {
