@@ -25,7 +25,7 @@ Four standalone packages (no monorepo workspace) plus repo tooling:
   grounded findings), no DB/FS/network I/O; the server imports it as raw TS.
 - `e2e/` — `@devdigest/e2e`: deterministic browser flows (`specs/*.flow.json`) on a seeded stack.
 - `scripts/` — `dev.sh` (bring up the local stack), `e2e.sh` (hermetic e2e run).
-- `docs/` — cross-package docs: `agent-prompts/` (reviewer prompt templates), lesson reports.
+- `docs/` — cross-package docs: `agent-prompts/` (reviewer prompt templates).
 - `.github/workflows/` — one CI workflow per test suite; `.claude/skills/` — project skills.
 
 ## Stack
