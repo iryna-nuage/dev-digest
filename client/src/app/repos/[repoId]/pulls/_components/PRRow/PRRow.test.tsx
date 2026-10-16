@@ -67,10 +67,10 @@ describe("PRRow — HW1 FINDINGS column + read-only popover (criteria 20–21)",
 
   it("shows severity icons; hover opens 'N FINDINGS IN THIS RUN' with read-only previews (FC6–FC7)", () => {
     renderFindingsRow({ ...PR, latest_findings: FINDINGS });
-    const trigger = screen.getByTestId("pr-findings-trigger");
+    const trigger = screen.getByTestId("findings-popover-trigger");
     expect(trigger.querySelector('[data-severity="CRITICAL"]')).toHaveTextContent("1");
     expect(trigger.querySelector('[data-severity="WARNING"]')).toHaveTextContent("1");
-    expect(screen.queryByTestId("pr-findings-popover")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("findings-popover")).not.toBeInTheDocument();
 
     fireEvent.mouseEnter(trigger);
     const popover = screen.getByRole("dialog", { name: "2 FINDINGS IN THIS RUN" });
@@ -89,7 +89,7 @@ describe("PRRow — HW1 FINDINGS column + read-only popover (criteria 20–21)",
 
   it("singular title for one finding; Escape closes the popover", () => {
     renderFindingsRow({ ...PR, latest_findings: FINDINGS.slice(0, 1) });
-    const trigger = screen.getByTestId("pr-findings-trigger");
+    const trigger = screen.getByTestId("findings-popover-trigger");
     fireEvent.focus(trigger); // keyboard users get it too
     expect(screen.getByRole("dialog", { name: "1 FINDING IN THIS RUN" })).toBeInTheDocument();
     fireEvent.keyDown(trigger, { key: "Escape" });
@@ -98,26 +98,26 @@ describe("PRRow — HW1 FINDINGS column + read-only popover (criteria 20–21)",
 
   it("clicking inside the popover does not navigate the row", () => {
     renderFindingsRow({ ...PR, latest_findings: FINDINGS });
-    fireEvent.mouseEnter(screen.getByTestId("pr-findings-trigger"));
+    fireEvent.mouseEnter(screen.getByTestId("findings-popover-trigger"));
     fireEvent.click(screen.getByText("N+1 query in user list endpoint"));
     expect(push).not.toHaveBeenCalled();
   });
 
   it("null or [] → '—' and no popover (FC8)", () => {
     renderFindingsRow({ ...PR, latest_findings: null });
-    expect(screen.queryByTestId("pr-findings-trigger")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("findings-popover-trigger")).not.toBeInTheDocument();
     cleanup();
     renderFindingsRow({ ...PR, latest_findings: [] });
-    expect(screen.queryByTestId("pr-findings-trigger")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("findings-popover-trigger")).not.toBeInTheDocument();
     cleanup();
     renderFindingsRow(PR); // field absent
-    expect(screen.queryByTestId("pr-findings-trigger")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("findings-popover-trigger")).not.toBeInTheDocument();
   });
 
   it("hovering makes no request (FC10)", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     renderFindingsRow({ ...PR, latest_findings: FINDINGS });
-    fireEvent.mouseEnter(screen.getByTestId("pr-findings-trigger"));
+    fireEvent.mouseEnter(screen.getByTestId("findings-popover-trigger"));
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

@@ -1,7 +1,9 @@
-/* FindingsPopover — PR-list FINDINGS cell: severity icons that open a READ-ONLY
-   "N FINDINGS IN THIS RUN" popover on hover / keyboard focus (HW1 criteria
-   20–21). No buttons or links inside — Accept / Reject live on the PR page.
-   Rendered through a portal: the table card clips overflow.
+/* FindingsPopover — severity icons that open a READ-ONLY "N FINDINGS IN THIS
+   RUN" preview on hover / keyboard focus. Shared by the PR-list FINDINGS column
+   (HW1 criteria 20–21) and the Agent runs Timeline (criterion 16). The icons are
+   not clickable; no buttons or links inside — Accept / Reject live on the
+   Review runs cards. Pure props: hovering never fetches. Rendered through a
+   portal: the PR-list table card clips overflow.
    Spec: client/specs/L01-findings-severity.md. */
 "use client";
 
@@ -15,7 +17,15 @@ import { CLOSE_DELAY_MS, POPOVER_WIDTH } from "./constants";
 import { lineLabel, plainText } from "./helpers";
 import { s } from "./styles";
 
-export function FindingsPopover({ findings }: { findings: PrFindingPreview[] }) {
+export function FindingsPopover({
+  findings,
+  iconSize,
+}: {
+  /** Listed in the order given; a FindingRecord[] fits too (superset). */
+  findings: PrFindingPreview[];
+  /** Trigger icon size (SeverityIconCounts default when omitted). */
+  iconSize?: number;
+}) {
   const t = useTranslations("prReview");
   const triggerRef = React.useRef<HTMLSpanElement | null>(null);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,9 +79,9 @@ export function FindingsPopover({ findings }: { findings: PrFindingPreview[] }) 
           if (e.key === "Escape") close();
         }}
         style={s.trigger}
-        data-testid="pr-findings-trigger"
+        data-testid="findings-popover-trigger"
       >
-        <SeverityIconCounts counts={countBySeverity(findings)} />
+        <SeverityIconCounts counts={countBySeverity(findings)} size={iconSize} />
       </span>
       {pos &&
         createPortal(
@@ -80,14 +90,14 @@ export function FindingsPopover({ findings }: { findings: PrFindingPreview[] }) 
             aria-labelledby={titleId}
             onMouseEnter={cancelClose}
             onMouseLeave={scheduleClose}
-            // React portals bubble to PRRow's onClick — don't navigate from here.
+            // React portals bubble to the host row's onClick (PRRow navigates) — stop here.
             onClick={(e) => e.stopPropagation()}
             style={s.panel(pos.top, pos.left)}
-            data-testid="pr-findings-popover"
+            data-testid="findings-popover"
           >
             <div id={titleId} style={s.header}>
               <Icon.Info size={13} aria-hidden />
-              {t("list.findingsPopover.title", { count: findings.length })}
+              {t("findingsPopover.title", { count: findings.length })}
             </div>
             <div style={s.list}>
               {findings.map((f) => {
