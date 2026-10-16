@@ -2,10 +2,9 @@
  * PR-list FINDINGS (pure — no DB, so it unit-tests cleanly).
  * Spec: server/specs/L01-findings-severity.md.
  *
- * "THIS RUN" is the PR's LATEST REVIEW — the same notion as the COST column:
- * every review of the review batch of the PR's most recent agent run. PRs
- * without a batch (no runs at all, e.g. the seeded review, or a pre-L01 run)
- * fall back to their latest review. A batch with no persisted review yet
+ * "THIS RUN" is the PR's LATEST REVIEW: every review of the review batch of
+ * the PR's most recent agent run. PRs without a batch (no runs at all, e.g.
+ * the seeded review, or a pre-L01 run) fall back to their latest review. A batch with no persisted review yet
  * (still running / every run failed) gives null.
  */
 

@@ -311,7 +311,7 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     await app.close();
   });
 
-  it('L01 cost: runs persist cost_usd; the PR list prices only the latest finished batch', async () => {
+  it('L01 cost: runs persist cost_usd; the PR list sums every successful run', async () => {
     const app = await appWith(REVIEW_FIXTURE);
     const { repo, pr } = await setupRepoAndPr(pg.handle.db, workspaceId);
     const agent = (
@@ -342,13 +342,19 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     const trace = (await app.inject({ method: 'GET', url: `/runs/${runId}/trace` })).json();
     expect(trace.stats.cost_usd).toBeCloseTo(0.001, 10);
 
-    // Launch 2 — a new batch; the list shows its cost only, not the PR history sum.
+    // Launch 2 — a new batch; the list shows the SUM of both successful runs
+    // (HW1 criterion 12), while each run keeps its own cost.
     await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } });
     const runs = await waitForPrRuns(pg.handle.db, pr.id, { expected: 2 });
     expect(new Set(runs.map((r) => r.reviewBatchId)).size).toBe(2);
-    expect(await listCost()).toBeCloseTo(0.001, 10);
+    expect(await listCost()).toBeCloseTo(0.002, 10);
+    const history2 = (await app.inject({ method: 'GET', url: `/pulls/${pr.id}/runs` })).json();
+    expect(history2.map((r: { cost_usd: number }) => r.cost_usd)).toEqual([
+      expect.closeTo(0.001, 10),
+      expect.closeTo(0.001, 10),
+    ]);
 
-    // A run of the latest batch still running → "—" (null) until the batch finishes.
+    // A newer run still running adds nothing — and doesn't hide the total.
     const latest = runs.find((r) => r.id !== runId)!;
     const [pending] = await pg.handle.db
       .insert(t.agentRuns)
@@ -360,14 +366,14 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
         status: 'running',
       })
       .returning();
-    expect(await listCost()).toBeNull();
+    expect(await listCost()).toBeCloseTo(0.002, 10);
 
-    // It fails (no cost) → batch finished → sum of the known costs.
+    // It fails (no cost) → still only the successful runs count.
     await pg.handle.db
       .update(t.agentRuns)
       .set({ status: 'failed', costUsd: null })
       .where(eq(t.agentRuns.id, pending!.id));
-    expect(await listCost()).toBeCloseTo(0.001, 10);
+    expect(await listCost()).toBeCloseTo(0.002, 10);
 
     await app.close();
   });

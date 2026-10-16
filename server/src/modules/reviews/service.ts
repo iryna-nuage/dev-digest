@@ -116,7 +116,7 @@ export class ReviewService {
     // the client persists these in global state and subscribes to the SSE
     // stream. The actual (slow) review runs in the background below.
     // One review launch = one batch: every run created here shares this id, so
-    // the PR list can price the latest review (agent_runs has no other grouping).
+    // the PR list can show the latest review's findings (agent_runs has no other grouping).
     const reviewBatchId = randomUUID();
     const runs: { run_id: string; agent_id: string; agent_name: string }[] = [];
     const jobs: { agent: AgentRow; runId: string }[] = [];

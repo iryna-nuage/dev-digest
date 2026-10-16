@@ -36,6 +36,17 @@ Status: workaround
 
 ## What Doesn't Work
 
+### 2026-10-16 · pulls · PR-list COST is the sum of ALL successful runs, never the latest batch
+What: L01 first scoped `PrMeta.cost_usd` to the latest review batch (null while it ran); the user
+corrected it against HW1 criterion 12 and the course demo: COST = sum of every `done` run with a
+known `cost_usd`, across all launches. The neighbouring FINDINGS column deliberately keeps the
+latest-batch scope (`latestRunReviewIds`), and both read the same `runRows`. The Session Note
+"2026-10-11 · L01 run cost" (COST = latest batch) is outdated.
+Do: NEVER align COST with the FINDINGS latest-batch rule; keep per-run cost (Timeline, trace)
+as the individual run's value.
+Where: src/modules/pulls/cost.ts:24 · src/modules/pulls/findings.ts:38 · src/modules/pulls/routes.ts:151
+Status: fixed (2026-10-16)
+
 ## Codebase Patterns
 
 ### 2026-09-25 · platform · Runtime state lives in memory
@@ -118,6 +129,10 @@ Status: open → fixed in reviews.it.test.ts `appWith` (2026-10-11); other `.it`
 Persisted `agent_runs.cost_usd` + per-launch `review_batch_id` (migration 0010), PR-list COST =
 latest batch (`modules/pulls/cost.ts`). Added: runMigrations workaround, Docker-hang replay,
 .env key leak into tests, indexer-pipeline ENOENT question.
+
+### 2026-10-16 · PR-list COST → sum of all successful runs
+Replaced the latest-batch cost rule with `successfulRunsCostByPr` (criterion 12); specs and
+tests updated. Added: "PR-list COST is the sum of ALL successful runs, never the latest batch".
 
 ## Open Questions
 

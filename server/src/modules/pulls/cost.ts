@@ -1,45 +1,33 @@
 /**
  * PR-list COST (pure — no DB, so it unit-tests cleanly). Spec: server/specs/L01-run-cost.md.
  *
- * A PR's COST is the cost of its LATEST REVIEW: the review batch of the PR's
- * most recent agent run (`agent_runs.review_batch_id`, one id per
- * `POST /pulls/:id/review`). Older batches never count.
+ * A PR's COST is the SUM of the costs of ALL its successful runs: every
+ * `status = 'done'` agent run with a known `cost_usd`, across all launches —
+ * older runs keep counting when newer ones happen. Failed / cancelled / still
+ * running runs and unknown (NULL) costs add nothing. Per-run cost (Timeline,
+ * trace) stays the individual run's own value.
  *
- * Null (the UI shows "—") when the latest run has no batch (pre-L01 run), when
- * any run of the batch is still `running`, or when no run of the batch has a
- * known cost. Failed/cancelled runs are finished and simply add nothing.
+ * Null (the UI shows "—") when the PR has no successful run with a known cost.
  */
 
 export interface RunCostRow {
   prId: string | null;
-  reviewBatchId: string | null;
   status: string | null;
   costUsd: number | null;
 }
 
 /**
- * Latest-review cost per PR. `rows` MUST be ordered newest-first (`ran_at DESC`)
- * — the first row seen for a PR decides its latest batch.
+ * Total successful-run cost per PR. PRs without any run are absent (the route
+ * maps them to null); PRs whose runs have no successful known cost map to null.
+ * A known 0 (free model) counts, so an all-free PR totals 0, not null.
  */
-export function latestReviewCostByPr(rows: RunCostRow[]): Map<string, number | null> {
-  const latestBatch = new Map<string, string | null>();
-  for (const r of rows) {
-    if (r.prId && !latestBatch.has(r.prId)) latestBatch.set(r.prId, r.reviewBatchId);
-  }
-
+export function successfulRunsCostByPr(rows: RunCostRow[]): Map<string, number | null> {
   const out = new Map<string, number | null>();
-  for (const [prId, batchId] of latestBatch) {
-    if (batchId == null) {
-      out.set(prId, null);
-      continue;
-    }
-    const batch = rows.filter((r) => r.prId === prId && r.reviewBatchId === batchId);
-    if (batch.some((r) => r.status === 'running')) {
-      out.set(prId, null);
-      continue;
-    }
-    const known = batch.filter((r) => r.costUsd != null).map((r) => r.costUsd!);
-    out.set(prId, known.length === 0 ? null : known.reduce((a, b) => a + b, 0));
+  for (const r of rows) {
+    if (!r.prId) continue;
+    const total = out.get(r.prId) ?? null;
+    if (r.status === 'done' && r.costUsd != null) out.set(r.prId, (total ?? 0) + r.costUsd);
+    else out.set(r.prId, total);
   }
   return out;
 }

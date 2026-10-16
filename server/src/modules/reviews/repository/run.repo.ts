@@ -124,7 +124,7 @@ export async function createAgentRun(
     model: string | null;
     /**
      * Groups the runs of one `POST /pulls/:id/review` into a review batch — the
-     * PR list's COST is the cost of the latest batch. Null = not part of a batch.
+     * PR list's FINDINGS show the latest batch. Null = not part of a batch.
      */
     reviewBatchId?: string | null;
   },

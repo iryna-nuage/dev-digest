@@ -8,7 +8,7 @@ import { getContext } from '../_shared/context.js';
 import { IdParams } from '../_shared/schemas.js';
 import { AppError, NotFoundError } from '../../platform/errors.js';
 import { deriveReviewStatus } from './status.js';
-import { latestReviewCostByPr } from './cost.js';
+import { successfulRunsCostByPr } from './cost.js';
 import { latestRunReviewIds, latestFindingsByPr } from './findings.js';
 
 /**
@@ -131,8 +131,9 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
       }
     }
 
-    // Latest-review COST per PR (L01): cost of the PR's most recent review
-    // batch; the grouping rule lives in the pure `latestReviewCostByPr`.
+    // COST per PR (L01, HW1 criterion 12): sum of ALL the PR's successful runs
+    // with a known cost; the rule lives in the pure `successfulRunsCostByPr`.
+    // The same run rows (newest-first, with batch ids) feed FINDINGS below.
     let costByPr = new Map<string, number | null>();
     let findingsByPr = new Map<string, PrFindingPreview[] | null>();
     if (prIds.length > 0) {
@@ -147,7 +148,7 @@ export default async function pullsRoutes(appBase: FastifyInstance) {
         .from(t.agentRuns)
         .where(and(eq(t.agentRuns.workspaceId, workspaceId), inArray(t.agentRuns.prId, prIds)))
         .orderBy(desc(t.agentRuns.ranAt));
-      costByPr = latestReviewCostByPr(runRows);
+      costByPr = successfulRunsCostByPr(runRows);
 
       // Latest-run FINDINGS per PR (HW1, read-only list popover): the reviews
       // of the latest batch (fallback: latest review); rule in `findings.ts`.
