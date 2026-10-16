@@ -36,6 +36,17 @@ Status: workaround
 
 ## What Doesn't Work
 
+### 2026-10-16 · pulls · PR-list COST is the sum of ALL successful runs, never the latest batch
+What: L01 first scoped `PrMeta.cost_usd` to the latest review batch (null while it ran); the user
+corrected it against HW1 criterion 12 and the course demo: COST = sum of every `done` run with a
+known `cost_usd`, across all launches. The neighbouring FINDINGS column deliberately keeps the
+latest-batch scope (`latestRunReviewIds`), and both read the same `runRows`. The Session Note
+"2026-10-11 · L01 run cost" (COST = latest batch) is outdated.
+Do: NEVER align COST with the FINDINGS latest-batch rule; keep per-run cost (Timeline, trace)
+as the individual run's value.
+Where: src/modules/pulls/cost.ts:24 · src/modules/pulls/findings.ts:38 · src/modules/pulls/routes.ts:151
+Status: fixed (2026-10-16)
+
 ## Codebase Patterns
 
 ### 2026-09-25 · platform · Runtime state lives in memory
@@ -70,13 +81,15 @@ Status: open
 What: `client/src/vendor/shared` is a manual copy of `src/vendor/shared`. Already differing:
 adapters.ts, contracts/trace.ts, contracts/eval-ci.ts, contracts/knowledge.ts,
 contracts/productionize.ts. Contract changes must be applied to both copies.
-Where: src/vendor/shared ↔ client/src/vendor/shared
+Where: src/vendor/shared ↔ client/src/vendor/shared · src/vendor/shared/adapters.ts:83 ↔
+client/src/vendor/shared/adapters.ts:77
 Status: open
 
 ### 2026-09-25 · platform · Unused modules
 What: `model-router.ts`, `trace-builder.ts` and `prompts.ts` are not imported anywhere.
 `platform/prompt.ts` and `platform/grounding.ts` are re-export shims of reviewer-core.
-Where: src/platform/
+Where: src/platform/ · src/platform/model-router.ts:27 · src/platform/trace-builder.ts:37 ·
+src/platform/prompts.ts:24 · src/platform/prompt.ts:6 · src/platform/grounding.ts:6
 Status: scaffolding for later lessons
 
 ## Tool & Library Notes
@@ -112,12 +125,34 @@ seeded/enabled agents.
 Where: src/platform/config.ts:1 · test/reviews.it.test.ts (appWith, "run all enabled agents")
 Status: open → fixed in reviews.it.test.ts `appWith` (2026-10-11); other `.it` files not audited
 
+### 2026-10-16 · tests · `indexer-pipeline.test.ts` ENOENT on Windows comes from its own test helper
+What: the 6 failures ("ENOENT … open '…\repo-intel-full-XXXX\src\util.ts'") are thrown by the
+test's `writeFileAt`, not by the pipeline: it finds the parent dir with `full.lastIndexOf('/')`,
+but on win32 `join()` returns backslashes, so the index is -1, `mkdir` is skipped and `writeFile`
+of a nested path (`src/util.ts`, `src/a.ts`) fails. Confirmed with `path.join` on Windows; every
+failing case writes a nested path. Not fixed yet — fix direction: `path.dirname(full)`.
+Do: NEVER treat these 6 Windows failures as a regression from a feature change.
+Where: test/indexer-pipeline.test.ts:142 · test/indexer-pipeline.test.ts:162-165
+Status: open (test-only, Windows)
+
 ## Session Notes
 
 ### 2026-10-11 · L01 run cost
 Persisted `agent_runs.cost_usd` + per-launch `review_batch_id` (migration 0010), PR-list COST =
 latest batch (`modules/pulls/cost.ts`). Added: runMigrations workaround, Docker-hang replay,
 .env key leak into tests, indexer-pipeline ENOENT question.
+Where: src/db/migrations/0010_sleepy_wild_child.sql:1 · src/modules/reviews/run-executor.ts:248 ·
+src/modules/reviews/service.ts:120
+
+### 2026-10-16 · PR-list COST → sum of all successful runs
+Replaced the latest-batch cost rule with `successfulRunsCostByPr` (criterion 12); specs and
+tests updated. Added: "PR-list COST is the sum of ALL successful runs, never the latest batch".
+Where: src/modules/pulls/cost.ts:24 · test/pulls-cost.test.ts:21 · specs/L01-run-cost.md:87
+
+### 2026-10-16 · INSIGHTS `path:line` evidence (HW1 criterion 11)
+Validator and skill now require `Where: path:line` in every dated entry; one-time repair of 8
+entries' `Where:`. Added: "`indexer-pipeline.test.ts` ENOENT on Windows comes from its own test helper".
+Where: .claude/skills/engineering-insights/scripts/check-insights.mjs:31 · test/indexer-pipeline.test.ts:142
 
 ## Open Questions
 
@@ -150,5 +185,5 @@ What: all 6 tests fail with `ENOENT: no such file or directory, open
 a clean HEAD and the cause is not traced (suspect: path join/normalisation in the pipeline vs
 Windows separators).
 Do: check whether the pipeline rebuilds paths with `/` before blaming a feature change.
-Where: test/indexer-pipeline.test.ts · src/modules/repo-intel/pipeline/full.ts
-Status: unverified
+Where: test/indexer-pipeline.test.ts:140-144 · src/modules/repo-intel/pipeline/full.ts:144
+Status: unverified → superseded by "`indexer-pipeline.test.ts` ENOENT on Windows comes from its own test helper" (2026-10-16)

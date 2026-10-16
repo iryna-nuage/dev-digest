@@ -5,6 +5,7 @@ skill: append-only — add entries at the end of a section; never edit or delete
 to their `Status:` line.
 
 Entry: `### YYYY-MM-DD · <area> · <the lesson stated as a rule>`, then What / Do / Where / Status.
+Every dated entry, Session Notes included, has `Where: path:line`.
 
 ## What Works
 

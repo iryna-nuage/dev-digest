@@ -311,7 +311,7 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     await app.close();
   });
 
-  it('L01 cost: runs persist cost_usd; the PR list prices only the latest finished batch', async () => {
+  it('L01 cost: runs persist cost_usd; the PR list sums every successful run', async () => {
     const app = await appWith(REVIEW_FIXTURE);
     const { repo, pr } = await setupRepoAndPr(pg.handle.db, workspaceId);
     const agent = (
@@ -342,13 +342,19 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
     const trace = (await app.inject({ method: 'GET', url: `/runs/${runId}/trace` })).json();
     expect(trace.stats.cost_usd).toBeCloseTo(0.001, 10);
 
-    // Launch 2 — a new batch; the list shows its cost only, not the PR history sum.
+    // Launch 2 — a new batch; the list shows the SUM of both successful runs
+    // (HW1 criterion 12), while each run keeps its own cost.
     await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } });
     const runs = await waitForPrRuns(pg.handle.db, pr.id, { expected: 2 });
     expect(new Set(runs.map((r) => r.reviewBatchId)).size).toBe(2);
-    expect(await listCost()).toBeCloseTo(0.001, 10);
+    expect(await listCost()).toBeCloseTo(0.002, 10);
+    const history2 = (await app.inject({ method: 'GET', url: `/pulls/${pr.id}/runs` })).json();
+    expect(history2.map((r: { cost_usd: number }) => r.cost_usd)).toEqual([
+      expect.closeTo(0.001, 10),
+      expect.closeTo(0.001, 10),
+    ]);
 
-    // A run of the latest batch still running → "—" (null) until the batch finishes.
+    // A newer run still running adds nothing — and doesn't hide the total.
     const latest = runs.find((r) => r.id !== runId)!;
     const [pending] = await pg.handle.db
       .insert(t.agentRuns)
@@ -360,14 +366,73 @@ d('A2 reviews + agents (Testcontainers pg)', () => {
         status: 'running',
       })
       .returning();
-    expect(await listCost()).toBeNull();
+    expect(await listCost()).toBeCloseTo(0.002, 10);
 
-    // It fails (no cost) → batch finished → sum of the known costs.
+    // It fails (no cost) → still only the successful runs count.
     await pg.handle.db
       .update(t.agentRuns)
       .set({ status: 'failed', costUsd: null })
       .where(eq(t.agentRuns.id, pending!.id));
-    expect(await listCost()).toBeCloseTo(0.001, 10);
+    expect(await listCost()).toBeCloseTo(0.002, 10);
+
+    await app.close();
+  });
+
+  it('HW1 findings: the PR list returns the latest run’s findings, with no model call (FS1–FS3, FS8)', async () => {
+    // Hold the mock so we can prove GET /repos/:id/pulls never reaches the model.
+    const llm = new MockLLMProvider('openai', { structured: REVIEW_FIXTURE });
+    const app = await buildApp({
+      config: config(),
+      db: pg.handle.db,
+      overrides: {
+        embedder: new MockEmbedder(),
+        git: new MockGitClient({ diff: DIFF }),
+        llm: { openai: llm, openrouter: new MockLLMProvider('openai', { structured: REVIEW_FIXTURE }) },
+      },
+    });
+    const { repo, pr } = await setupRepoAndPr(pg.handle.db, workspaceId);
+    const agent = (
+      await app.inject({
+        method: 'POST',
+        url: '/agents',
+        payload: { name: 'FindingsAgent', provider: 'openai', model: 'gpt-4.1', system_prompt: 's' },
+      })
+    ).json();
+    const listFindings = async () => {
+      const list = (await app.inject({ method: 'GET', url: `/repos/${repo.id}/pulls` })).json();
+      return list.find((p: { id: string }) => p.id === pr.id).latest_findings;
+    };
+
+    expect(await listFindings()).toBeNull(); // FS1: never reviewed
+
+    // Launch 1 — grounding keeps the line-11 CRITICAL finding, drops the line-999 one.
+    await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } });
+    await waitForPrRuns(pg.handle.db, pr.id, { expected: 1 });
+    const first = await listFindings();
+    expect(first).toHaveLength(1);
+    expect(first[0]).toMatchObject({
+      severity: 'CRITICAL',
+      category: 'security',
+      title: 'Hardcoded Stripe secret key',
+      file: 'src/config.ts',
+      start_line: 11,
+      end_line: 11,
+      confidence: 0.95,
+      rationale: 'A live Stripe key is committed in source.',
+    });
+    expect(first[0]).not.toHaveProperty('suggestion'); // preview only
+
+    // Launch 2 — a new batch replaces launch 1's findings (FS2/FS3).
+    await app.inject({ method: 'POST', url: `/pulls/${pr.id}/review`, payload: { agentId: agent.id } });
+    await waitForPrRuns(pg.handle.db, pr.id, { expected: 2 });
+    const second = await listFindings();
+    expect(second).toHaveLength(1);
+    expect(second[0].id).not.toBe(first[0].id);
+
+    // FS8: reading the list makes no LLM request.
+    const calls = llm.calls.length;
+    await listFindings();
+    expect(llm.calls.length).toBe(calls);
 
     await app.close();
   });

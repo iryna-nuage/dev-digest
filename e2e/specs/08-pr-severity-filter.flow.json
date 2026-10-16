@@ -1,0 +1,19 @@
+{
+  "name": "PR detail Review runs card shows severity counters and filters findings by severity",
+  "description": "HW1 criteria 16–18. From PR #482, open the Agent runs tab; the seeded review run's card is open by default, so under its verdict + PR SCORE the severity pills (1 CRITICAL · 1 WARNING) and the Critical / Warning / Suggestion filter buttons render. Clicking Critical keeps the CRITICAL finding; clicking it again restores the full list (the WARNING finding). Counts come from persisted findings — read-only seeded data, no model call. Hiding of non-matching cards is asserted by the RTL tests (FindingsPanel.test.tsx); the PR-list hover popover (criteria 20–21) by PRRow.test.tsx. Assumes a freshly-seeded DB (see e2e/README.md).",
+  "steps": [
+    { "cmd": ["open", "{BASE}/"], "label": "load the app root" },
+    { "cmd": ["wait", "--url", "/pulls"], "label": "land on the PR list" },
+    { "cmd": ["find", "text", "Add rate limiting to public API endpoints", "click"], "label": "open the PR row" },
+    { "cmd": ["wait", "--url", "/pulls/482"], "label": "navigate to the PR detail route" },
+    { "cmd": ["wait", "--load", "networkidle"], "label": "PR detail data settles" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Agent runs"], "label": "switch to the Agent runs tab" },
+    { "cmd": ["wait", "--url", "tab=findings"], "label": "findings tab is active in the URL" },
+    { "cmd": ["wait", "--text", "1 CRITICAL"], "label": "severity pill for the seeded CRITICAL finding" },
+    { "cmd": ["wait", "--text", "1 WARNING"], "label": "severity pill for the seeded WARNING finding" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Critical"], "label": "filter the run's findings to Critical" },
+    { "cmd": ["wait", "--text", "Hardcoded Stripe secret key in commit"], "label": "the CRITICAL finding stays visible" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Critical"], "label": "click Critical again to clear the filter" },
+    { "cmd": ["wait", "--text", "N+1 query in user list endpoint"], "label": "the full list (incl. the WARNING finding) is back" }
+  ]
+}

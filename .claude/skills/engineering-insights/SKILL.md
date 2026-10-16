@@ -75,8 +75,19 @@ Where: path:line · path:line
 Status: open | fixed (YYYY-MM-DD) | by design | unverified | superseded by "<title>" (YYYY-MM-DD)
 ```
 
-Session Notes entry: `### YYYY-MM-DD · <task>`, then 1–2 lines: what was done, which entries were
-added. Absolute dates; `Where:` paths relative to the module, forward slashes; field keys in English.
+Session Notes entry:
+
+```
+### YYYY-MM-DD · <task>
+<1–2 lines: what was done, which entries were added>
+Where: path:line · path:line
+```
+
+**Every dated entry — Session Notes included — needs `Where:` with at least one `path:line`** (or
+`path:start-end`) pointing at the code, test or spec it is about; for a Session Note, the task's main
+artifacts. Never the line of the INSIGHTS entry itself. A missing or empty `Where:`, or one with paths
+but no line number, fails the validator. Absolute dates; `Where:` paths relative to the module (another
+module's file: from the repo root), forward slashes; field keys in English.
 
 Bad → good:
 - ❌ "Promises can be tricky." → ✅ "`Promise.all()` in the ingest pipeline times out after 30
@@ -94,9 +105,12 @@ Bad → good:
    entry → a new entry that names the old title. Contradicts an existing entry → a new entry, append
    `→ superseded by "<new title>" (YYYY-MM-DD)` to the old entry's `Status:`, and tell the user.
 3. Insert at the end of the chosen section. Never edit, reorder or delete other entries; the only
-   permitted change to an old entry is appending to its `Status:` line.
+   permitted change to an old entry is appending to its `Status:` line. Sole exception: when the user
+   explicitly authorizes a one-time compliance repair, an old entry's `Where:` may get missing
+   `path:line` evidence — nothing else in it changes; validate that repair with
+   `--skip-append-check` and commit it on its own.
 4. Run `node .claude/skills/engineering-insights/scripts/check-insights.mjs <file>` and fix until it
-   passes.
+   passes (it checks sections, entry fields, `path:line` evidence and append-only against HEAD).
 
 ## When to capture
 
@@ -121,4 +135,5 @@ Nothing written → say nothing about insights.
 - Project knowledge goes to INSIGHTS.md (shared, in git), not to personal auto-memory.
 - Insights about the do-not-touch dirs (`server/src/vendor/shared`, `server/src/db/migrations`) go
   to `server/INSIGHTS.md`; the dirs themselves are never edited for this.
-- The validator is dependency-free Node; the repo guarantees Node ≥ 22, not Python.
+- The validator is dependency-free Node; the repo guarantees Node ≥ 22, not Python. Its self-test:
+  `node --test .claude/skills/engineering-insights/scripts/check-insights.test.mjs`.

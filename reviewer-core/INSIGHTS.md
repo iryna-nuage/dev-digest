@@ -22,7 +22,7 @@ Status: by design (so far)
 ### 2026-09-25 · review · Cancellation checkpoint only between chunks
 What: `checkCancelled()` runs before each chunk's LLM call. In single-pass mode (the studio
 default) there is exactly one checkpoint, before the only call.
-Where: src/review/run.ts
+Where: src/review/run.ts:162-164
 Status: by design; see server/INSIGHTS.md for the related cancel bug
 
 ## Tool & Library Notes

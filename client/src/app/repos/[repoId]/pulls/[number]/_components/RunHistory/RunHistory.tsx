@@ -3,8 +3,9 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { Badge, Icon, CircularScore, type IconName } from "@devdigest/ui";
-import type { RunSummary, PrCommit } from "@devdigest/shared";
+import type { FindingRecord, RunSummary, PrCommit } from "@devdigest/shared";
 import { RunCostBadge } from "@/components/run-cost-badge";
+import { FindingsPopover } from "@/components/findings-popover";
 
 /**
  * PR timeline — every agent run interleaved with the PR's commits, newest-first
@@ -91,9 +92,12 @@ export function RunHistory({
   onOpenTrace,
   onGoToReview,
   onDelete,
+  findingsByRun,
 }: {
   runs: RunSummary[];
   commits?: PrCommit[];
+  /** run_id → that run's persisted findings (severity icons + hover preview). */
+  findingsByRun?: Record<string, FindingRecord[]>;
   /** Open the trace + log drawer for a run (the logs icon). */
   onOpenTrace: (runId: string) => void;
   /** Jump to this run's inline review accordion below (clicking the agent name). */
@@ -149,6 +153,7 @@ export function RunHistory({
 
         const r = item.run;
         const o = outcomeOf(r);
+        const runFindings = findingsByRun?.[r.run_id];
         const settled = r.status === "done";
         return (
           <div key={`run:${r.run_id}`} style={rowStyle}>
@@ -190,9 +195,18 @@ export function RunHistory({
                 </div>
               )}
               {settled && (
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  {t("runStatus.findings", { count: r.findings_count ?? 0 })}
-                  {(r.blockers ?? 0) > 0 ? t("runStatus.blockers", { count: r.blockers ?? 0 }) : ""}
+                <div style={{ display: "flex", alignItems: "center", fontSize: 12, color: "var(--text-muted)" }}>
+                  {/* HW1 criterion 16: severity icons, not clickable; hover / focus
+                      opens a read-only preview of THIS run's findings.
+                      No review for the run, or zero findings → the plain count. */}
+                  {runFindings && runFindings.length > 0 ? (
+                    <FindingsPopover findings={runFindings} iconSize={12.5} />
+                  ) : (
+                    t("runStatus.findings", { count: r.findings_count ?? 0 })
+                  )}
+                  {(r.blockers ?? 0) > 0 ? (
+                    <span style={{ whiteSpace: "pre" }}>{t("runStatus.blockers", { count: r.blockers ?? 0 })}</span>
+                  ) : null}
                 </div>
               )}
             </div>
