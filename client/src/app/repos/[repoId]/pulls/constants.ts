@@ -30,6 +30,9 @@ export const GRID = "1fr 132px 92px 60px 150px 118px 76px 78px";
 export const SIZE_SMALL_MAX = 100;
 export const SIZE_MEDIUM_MAX = 400;
 
+/** Open PRs carry a derived review status; everything else is merged/closed. */
+export const OPEN_STATUSES = new Set(["needs_review", "reviewed", "stale"]);
+
 /** Filter chips: status key + i18n label key (under `list.filter`). */
 export const STATUS_FILTERS: { key: string; labelKey: string }[] = [
   { key: "all", labelKey: "all" },

@@ -38,10 +38,15 @@ export function buildLineIndex(diff: UnifiedDiff): Map<string, Set<number>> {
   return idx;
 }
 
+/**
+ * Does any hunk line fall inside [start, end] (either order)? Iterates the hunk
+ * lines, not the range: the range comes from model output and is unbounded
+ * (e.g. -2e9..2e9), so looping over it could block the event loop.
+ */
 function rangeIntersects(lines: Set<number>, start: number, end: number): boolean {
   const lo = Math.min(start, end);
   const hi = Math.max(start, end);
-  for (let n = lo; n <= hi; n++) if (lines.has(n)) return true;
+  for (const n of lines) if (n >= lo && n <= hi) return true;
   return false;
 }
 
