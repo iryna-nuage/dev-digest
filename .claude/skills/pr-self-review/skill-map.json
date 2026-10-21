@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "exclude": [
+    "**/node_modules/**",
+    "**/*.lock",
+    "**/pnpm-lock.yaml",
+    "**/package-lock.json",
+    "skills-lock.json",
+    "**/*.md",
+    "**/*.json",
+    "**/*.snap",
+    "server/src/db/migrations/meta/**"
+  ],
+  "rules": [
+    {
+      "skills": [
+        "frontend-architecture",
+        "react-best-practices",
+        "typescript-expert"
+      ],
+      "include": [
+        "client/src/**/*.{ts,tsx}"
+      ],
+      "exclude": [
+        "client/src/vendor/**"
+      ]
+    },
+    {
+      "skills": [
+        "next-best-practices"
+      ],
+      "include": [
+        "client/src/**/*.{ts,tsx}",
+        "client/next.config.*"
+      ],
+      "exclude": [
+        "client/src/vendor/**",
+        "client/**/*.test.{ts,tsx}",
+        "client/src/test/**"
+      ]
+    },
+    {
+      "skills": [
+        "react-testing-library"
+      ],
+      "include": [
+        "client/**/*.test.{ts,tsx}",
+        "client/src/test/**"
+      ]
+    },
+    {
+      "skills": [
+        "onion-architecture",
+        "typescript-expert"
+      ],
+      "include": [
+        "server/src/**/*.ts",
+        "server/test/**/*.ts"
+      ],
+      "exclude": [
+        "server/src/vendor/**"
+      ]
+    },
+    {
+      "skills": [
+        "fastify-best-practices"
+      ],
+      "include": [
+        "server/src/modules/**/routes.ts",
+        "server/src/app.ts",
+        "server/src/server.ts",
+        "server/src/platform/**/*.ts"
+      ]
+    },
+    {
+      "skills": [
+        "drizzle-orm-patterns"
+      ],
+      "include": [
+        "server/src/modules/**/repository*.ts",
+        "server/src/modules/**/repository/**/*.ts",
+        "server/src/db/**/*.ts"
+      ]
+    },
+    {
+      "skills": [
+        "postgresql-table-design"
+      ],
+      "include": [
+        "server/src/db/schema.ts",
+        "server/src/db/schema/**/*.ts",
+        "server/src/db/migrations/*.sql"
+      ]
+    },
+    {
+      "skills": [
+        "zod"
+      ],
+      "include": [
+        "{client,server,reviewer-core,e2e}/**/*.{ts,tsx}"
+      ],
+      "contentMatch": "from ['\"]zod['\"]|\\bz\\.(object|enum|string|number|array|union|infer|discriminatedUnion)\\b",
+      "exclude": [
+        "**/*.test.{ts,tsx}"
+      ]
+    },
+    {
+      "skills": [
+        "security"
+      ],
+      "include": [
+        "server/src/modules/**/routes.ts",
+        "server/src/app.ts",
+        "server/src/platform/config.ts",
+        "server/src/adapters/**/*.ts",
+        "server/src/prompts/**",
+        "reviewer-core/src/prompt.ts",
+        "client/src/lib/api.ts"
+      ]
+    },
+    {
+      "skills": [
+        "security"
+      ],
+      "include": [
+        "{client,server,reviewer-core}/src/**/*.{ts,tsx}"
+      ],
+      "contentMatch": "process\\.env|dangerouslySetInnerHTML|\\bsql\\.raw\\(|child_process|\\b(execSync|execFile|spawn)\\(|\\binnerHTML\\b|\\beval\\(",
+      "exclude": [
+        "**/*.test.{ts,tsx}",
+        "**/test/**"
+      ]
+    },
+    {
+      "skills": [
+        "typescript-expert"
+      ],
+      "include": [
+        "reviewer-core/src/**/*.ts",
+        "reviewer-core/test/**/*.ts",
+        "e2e/**/*.ts"
+      ]
+    }
+  ],
+  "ignore": {
+    "engineering-insights": "workflow skill; changed INSIGHTS.md files are validated by the insights-validator check instead",
+    "mermaid-diagram": "authoring aid for diagrams, not a code-review rule set",
+    "pr-self-review": "this skill"
+  }
+}
