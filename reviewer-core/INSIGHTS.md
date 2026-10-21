@@ -10,6 +10,17 @@ Entry: `### YYYY-MM-DD · <area> · <the lesson stated as a rule>`, then What / 
 
 ## What Doesn't Work
 
+### 2026-10-21 · grounding · Never loop over a finding's model-supplied line range
+What: `rangeIntersects` used to run `for (n = lo; n <= hi; n++) lines.has(n)` over
+`start_line..end_line` from the LLM's JSON. The contract only says `z.number().int()`, so a
+`-2e9..2e9` range meant ~4e9 iterations on the API's event loop (measured 1.2 s per 1e8 →
+~24 s). It now iterates the hunk-line `Set` (O(hunk lines)), with the same result for every
+integer range.
+Do: NEVER iterate a finding's line range; iterate the diff's line set. Bounds on
+`start_line`/`end_line` are still unenforced (docs/architecture-refactoring-backlog.md RC-1).
+Where: src/grounding.ts:46-51 · test/grounding.test.ts:86
+Status: fixed (2026-10-21)
+
 ## Codebase Patterns
 
 ### 2026-09-25 · review · Score is recomputed, verdict is not
