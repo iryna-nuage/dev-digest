@@ -111,7 +111,7 @@ the script exits 0 without migrating or seeding and without printing "✓ migrat
 directly. Fix direction: compare with `pathToFileURL(process.argv[1]).href`.
 Found by reading the code; confirm by checking for the "✓ migrations applied" line.
 Where: src/db/migrate.ts:37 · src/db/seed.ts:227 · scripts/dev.sh:84
-Status: open (Windows only)
+Status: open (Windows only) → fixed (2026-10-24), see "CLI entrypoints use `isEntrypoint()` (`pathToFileURL`)"
 
 ### 2026-10-11 · tests · `server/.env` keys reach tests — un-mocked `openrouter` agents call the real API
 What: `src/platform/config.ts` starts with `import 'dotenv/config'`, so `OPENROUTER_API_KEY`
@@ -134,6 +134,20 @@ failing case writes a nested path. Not fixed yet — fix direction: `path.dirnam
 Do: NEVER treat these 6 Windows failures as a regression from a feature change.
 Where: test/indexer-pipeline.test.ts:142 · test/indexer-pipeline.test.ts:162-165
 Status: open (test-only, Windows)
+
+### 2026-10-24 · db · CLI entrypoints use `isEntrypoint()` (`pathToFileURL`), never `file://${argv[1]}`
+What: fixes "On Windows `pnpm db:migrate` / `pnpm db:seed` can silently do nothing". Both guards
+call `isEntrypoint(import.meta.url)`, which compares with `pathToFileURL(argv[1]).href` (and its
+realpath). Effect seen before the fix: the dev DB had no Test Quality Reviewer or skills although
+`pnpm db:seed` "succeeded". Verified after: on a throwaway DB, migrate ×2 → 11 rows in
+`drizzle.__drizzle_migrations` both times; seed ×2 → identical row counts. `test/db-entrypoint.test.ts`
+spawns both scripts through `tsx/cli` with `DATABASE_URL=''` (dotenv never overrides a set
+variable, so no DB is reached) and expects exit 1 "DATABASE_URL is required"; with the old guard
+it fails on Windows.
+Do: ALWAYS guard a runnable script with `isEntrypoint(import.meta.url)` from `src/db/entrypoint.ts`;
+confirm a real run by its "✓ migrations applied" / "✓ seeded" line, not by exit code 0.
+Where: src/db/entrypoint.ts:14 · src/db/migrate.ts:38 · src/db/seed.ts:298 · test/db-entrypoint.test.ts:83
+Status: fixed (2026-10-24)
 
 ## Session Notes
 
