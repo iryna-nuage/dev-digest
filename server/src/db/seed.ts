@@ -7,6 +7,9 @@ import {
   GENERAL_REVIEWER_PROMPT,
   SECURITY_REVIEWER_PROMPT,
   PERFORMANCE_REVIEWER_PROMPT,
+  TEST_QUALITY_REVIEWER_PROMPT,
+  BRANCH_COVERAGE_GATE_SKILL,
+  MOCKING_DISCIPLINE_SKILL,
 } from './seed-prompts.js';
 
 /** Default provider/model for the built-in reviewer agents. */
@@ -19,15 +22,17 @@ const DEFAULT_MODEL = 'deepseek/deepseek-v4-flash';
  *
  * Seeds: default workspace + system user + membership, default settings,
  * demo repo (acme/payments-api), PR #482 with files/commits, a sample review
- * with a few findings, and the three built-in agents (General + Security +
- * Performance), all on the default openrouter/deepseek-v4-flash provider+model.
+ * with a few findings, and the four built-in agents (General + Security +
+ * Performance + Test Quality), all on the default openrouter/deepseek-v4-flash
+ * provider+model. The Test Quality Reviewer gets two attached skills (L02).
  *
- * Course lessons populate the other tables (skills, conventions, memory, eval,
+ * Course lessons populate the other tables (conventions, memory, eval,
  * …) once their features are built — they start empty here.
  */
 
 export const DEFAULT_WORKSPACE_NAME = 'default';
 export const SYSTEM_USER_EMAIL = 'you@local';
+export const TEST_QUALITY_REVIEWER = 'Test Quality Reviewer';
 
 export async function seed(db: Db): Promise<{ workspaceId: string; userId: string }> {
   // ---- workspace + user (no-auth defaults) ----
@@ -176,7 +181,7 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
     ]);
   }
 
-  // ---- built-in agents (the three starter presets) ----
+  // ---- built-in agents (the starter presets + L02's Test Quality Reviewer) ----
   // Prompt bodies live in ./seed-prompts.ts (mirrored in docs/agent-prompts/*.md).
   const seedAgents: Array<typeof t.agents.$inferInsert> = [
     {
@@ -212,6 +217,17 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
       version: 1,
       createdBy: userId,
     },
+    {
+      workspaceId,
+      name: TEST_QUALITY_REVIEWER,
+      description: 'Checks test quality: untested branches, missing corner cases, over-mocking, flaky tests.',
+      provider: DEFAULT_PROVIDER,
+      model: DEFAULT_MODEL,
+      systemPrompt: TEST_QUALITY_REVIEWER_PROMPT,
+      enabled: true,
+      version: 1,
+      createdBy: userId,
+    },
   ];
   for (const a of seedAgents) {
     const [existing] = await db
@@ -219,6 +235,60 @@ export async function seed(db: Db): Promise<{ workspaceId: string; userId: strin
       .from(t.agents)
       .where(and(eq(t.agents.workspaceId, workspaceId), eq(t.agents.name, a.name)));
     if (!existing) await db.insert(t.agents).values(a);
+  }
+
+  // ---- L02: skills seeded for the Test Quality Reviewer, attached in order ----
+  // The rest of its skills come in through the UI (create / import). A skill
+  // that already exists by name is left as the user edited it.
+  const seedSkills: Array<typeof t.skills.$inferInsert> = [
+    {
+      workspaceId,
+      name: 'branch-coverage-gate',
+      description:
+        'Use on every diff that changes production code: flag each new or changed branch that no test drives and asserts.',
+      type: 'rubric',
+      source: 'manual',
+      body: BRANCH_COVERAGE_GATE_SKILL,
+      enabled: true,
+    },
+    {
+      workspaceId,
+      name: 'mocking-discipline',
+      description:
+        'Use when the diff adds or changes tests with mocks: flag tests that mock the unit under test or only verify their own mocks.',
+      type: 'convention',
+      source: 'manual',
+      body: MOCKING_DISCIPLINE_SKILL,
+      enabled: true,
+    },
+  ];
+  const skillIds: string[] = [];
+  for (const s of seedSkills) {
+    let [skill] = await db
+      .select()
+      .from(t.skills)
+      .where(and(eq(t.skills.workspaceId, workspaceId), eq(t.skills.name, s.name)));
+    if (!skill) {
+      [skill] = await db.insert(t.skills).values(s).returning();
+      await db.insert(t.skillVersions).values({ skillId: skill!.id, version: 1, body: skill!.body });
+    }
+    skillIds.push(skill!.id);
+  }
+  const [testQuality] = await db
+    .select()
+    .from(t.agents)
+    .where(and(eq(t.agents.workspaceId, workspaceId), eq(t.agents.name, TEST_QUALITY_REVIEWER)));
+  if (testQuality) {
+    // Only on first seed: once the agent has links, the user owns them.
+    const links = await db
+      .select()
+      .from(t.agentSkills)
+      .where(eq(t.agentSkills.agentId, testQuality.id));
+    if (links.length === 0) {
+      await db
+        .insert(t.agentSkills)
+        .values(skillIds.map((skillId, order) => ({ agentId: testQuality.id, skillId, order })));
+    }
   }
 
   return { workspaceId, userId };

@@ -52,6 +52,7 @@ Types: `Flow` / `Step` in `lib/assert.ts`.
 | `06-onboarding` | `/onboarding` | "Add a repository" form with "Repository URL" (not submitted) |
 | `07-settings` | `/settings/api-keys`, `/settings/models` | sections "API Keys" and "Feature Models" |
 | `08-pr-severity-filter` | `/` | PR #482 → Agent runs: pills "1 CRITICAL", "1 WARNING"; **Critical** filter keeps the CRITICAL card; clicking it again brings back the WARNING card |
+| `09-skills` | `/skills` | "Select a skill"; seeded `branch-coverage-gate` → Config ("Configuration"), Preview (rendered body), Stats ("Test Quality Reviewer"); **Open** → agent Skills tab "2 of 2 attached" |
 
 A UI change that breaks one of these assertions changes this contract: update the flow and this
 table together.

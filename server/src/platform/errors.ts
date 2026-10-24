@@ -28,6 +28,27 @@ export class ValidationError extends AppError {
   }
 }
 
+/** The write would break a uniqueness rule (e.g. a skill name already taken). */
+export class ConflictError extends AppError {
+  constructor(message = 'Conflict', details?: unknown) {
+    super('conflict', message, 409, details);
+  }
+}
+
+/** An uploaded payload exceeds a size limit (file, archive, extracted text). */
+export class PayloadTooLargeError extends AppError {
+  constructor(message = 'Payload too large', details?: unknown) {
+    super('payload_too_large', message, 413, details);
+  }
+}
+
+/** An uploaded file is of a type the endpoint does not accept. */
+export class UnsupportedMediaTypeError extends AppError {
+  constructor(message = 'Unsupported file type', details?: unknown) {
+    super('unsupported_media_type', message, 415, details);
+  }
+}
+
 export class ExternalServiceError extends AppError {
   constructor(message: string, details?: unknown) {
     super('external_service_error', message, 502, details);

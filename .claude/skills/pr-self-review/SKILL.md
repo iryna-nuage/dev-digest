@@ -1,6 +1,7 @@
 ---
 name: pr-self-review
 description: "Pre-PR self-review of ALL local changes in DevDigest (branch commits + staged + unstaged + untracked vs main). Maps every changed file to the project skills that own it (client UI files → frontend-architecture, react-best-practices, next-best-practices, react-testing-library; server files → onion-architecture, fastify-best-practices, drizzle-orm-patterns, postgresql-table-design; zod, security, typescript-expert by path or content), runs the repo's deterministic gates (onion dependency-cruiser, contract parity, migrations, lock files, INSIGHTS validator, typecheck), independently verifies every CRITICAL, and writes a verdict that blocks `gh pr create`, `gh pr merge` and `git push` while a verified CRITICAL remains. Use before opening or updating a pull request, before pushing a branch, when the pr-self-review gate blocked a command, or when the user runs /pr-self-review or asks to self-review, pre-review or check their changes before a PR."
+disable-model-invocation: true
 metadata:
   version: 1.0.0
   tags: code-review, pre-pr, merge-gate, skills-routing, workflow

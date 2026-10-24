@@ -18,7 +18,7 @@ Do: ALWAYS run, from `server/`:
 then verify the row count in `drizzle.__drizzle_migrations` / the new column in
 `information_schema.columns`.
 Where: src/db/migrate.ts:37
-Status: workaround (until the guard is fixed)
+Status: workaround (until the guard is fixed) → superseded by "CLI entrypoints use `isEntrypoint()` (`pathToFileURL`)" (2026-10-24)
 
 ### 2026-10-11 · tests · When Docker CLI hangs, replay an `.it` scenario on a throwaway DB
 What: `docker info` / `docker version` hung (Docker Desktop unresponsive) while Postgres on
@@ -92,6 +92,17 @@ Where: src/platform/ · src/platform/model-router.ts:27 · src/platform/trace-bu
 src/platform/prompts.ts:24 · src/platform/prompt.ts:6 · src/platform/grounding.ts:6
 Status: scaffolding for later lessons
 
+### 2026-10-23 · db · Multi-statement writes run in a transaction owned by ONE repository method
+What: the first `db.transaction` calls in `src/` (L02): skill insert + `skill_versions` v1,
+body update + snapshot, and `AgentsRepository.setSkills` (delete + insert, which used to leave an
+agent with no links if the insert failed). Each is opened inside a single repository method that no
+other use case wraps, so no `TransactionRunner` port was introduced; the onion skill's
+"no transactional use case yet" note predates this.
+Do: when a write spans one repository's tables, wrap it in that method; introduce the
+`TransactionRunner` / `TxHandle` port only when a use case spans several repositories.
+Where: src/modules/skills/repository.ts:44 · src/modules/skills/repository.ts:55 · src/modules/agents/repository.ts:231
+Status: by design
+
 ## Tool & Library Notes
 
 ### 2026-09-25 · boot · reviewer-core is imported as raw TS
@@ -100,6 +111,16 @@ What: the server resolves `@devdigest/reviewer-core` to `../reviewer-core/src`, 
 giving two zod instances; the error handler therefore detects ZodError by shape.
 Where: scripts/dev.sh:78-80 · reviewer-core/tsconfig.json:24 · src/app.ts:139
 Status: by design (starter)
+
+### 2026-10-23 · db · A new value in a Drizzle `text(…, { enum })` column needs no migration, but the schema enum must change
+What: `skills.source` is `text('source', { enum: [...] })` — the enum is TypeScript-only (no
+CHECK, no pg enum). Adding `imported_file` to the Zod `SkillSource` alone made inserts fail
+typecheck (TS2769 "Type '\"imported_file\"' is not assignable"); after adding it to the schema
+enum, `pnpm db:generate` printed "No schema changes, nothing to migrate".
+Do: ALWAYS update the Drizzle schema enum together with the Zod contract enum, and confirm with
+`pnpm db:generate` that no migration is produced.
+Where: src/db/schema/skills.ts:14 · src/vendor/shared/contracts/knowledge.ts:119
+Status: by design
 
 ## Recurring Errors & Fixes
 
@@ -167,6 +188,13 @@ Where: src/modules/pulls/cost.ts:24 · test/pulls-cost.test.ts:21 · specs/L01-r
 Validator and skill now require `Where: path:line` in every dated entry; one-time repair of 8
 entries' `Where:`. Added: "`indexer-pipeline.test.ts` ENOENT on Windows comes from its own test helper".
 Where: .claude/skills/engineering-insights/scripts/check-insights.mjs:31 · test/indexer-pipeline.test.ts:142
+
+### 2026-10-23 · L02 skills (server)
+New `skills` module (CRUD, versions, `.md` / `.zip` import preview via `fflate`), workspace-safe
+transactional `POST /agents/:id/skills`, executor passes attached ∧ enabled skills to the prompt
+and logs their tokens; Test Quality Reviewer seeded. Added: "transaction owned by one repository
+method", "Drizzle text enum needs no migration".
+Where: src/modules/skills/service.ts:60 · src/modules/skills/import/extract.ts:71 · src/modules/reviews/run-executor.ts:55
 
 ## Open Questions
 

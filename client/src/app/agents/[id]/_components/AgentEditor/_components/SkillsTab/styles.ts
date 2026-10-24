@@ -1,0 +1,50 @@
+import type { CSSProperties } from "react";
+
+/** Co-located styles for the agent SkillsTab. */
+export const s = {
+  wrap: { maxWidth: 860 } satisfies CSSProperties,
+  header: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12 } satisfies CSSProperties,
+  h2: { fontSize: 18, fontWeight: 700 } satisfies CSSProperties,
+  filter: { position: "relative", marginLeft: "auto", width: 260 } satisfies CSSProperties,
+  filterIcon: {
+    position: "absolute",
+    left: 10,
+    top: "50%",
+    transform: "translateY(-50%)",
+    color: "var(--text-muted)",
+  } satisfies CSSProperties,
+  filterInput: {
+    width: "100%",
+    height: 32,
+    padding: "0 10px 0 30px",
+    borderRadius: 6,
+    border: "1px solid var(--border)",
+    background: "var(--bg-elevated)",
+    color: "var(--text-primary)",
+    fontSize: 13,
+    outline: "none",
+  } satisfies CSSProperties,
+  hint: { fontSize: 13, color: "var(--text-muted)", marginBottom: 14 } satisfies CSSProperties,
+  list: { listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 } satisfies CSSProperties,
+  row: (attached: boolean, enabled: boolean, dragging: boolean): CSSProperties => ({
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "10px 14px",
+    borderRadius: 8,
+    border: "1px solid " + (dragging ? "var(--accent)" : "var(--border)"),
+    background: attached ? "var(--bg-hover)" : "var(--bg-elevated)",
+    opacity: enabled ? 1 : 0.6,
+  }),
+  handle: (disabled: boolean): CSSProperties => ({
+    display: "inline-flex",
+    padding: 2,
+    border: "none",
+    background: "none",
+    color: "var(--text-muted)",
+    cursor: disabled ? "not-allowed" : "grab",
+  }),
+  handleSpacer: { width: 18, flexShrink: 0 } satisfies CSSProperties,
+  name: { fontSize: 14, fontWeight: 600 } satisfies CSSProperties,
+  badge: { marginLeft: "auto" } satisfies CSSProperties,
+} as const;

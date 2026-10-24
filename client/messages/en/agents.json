@@ -89,9 +89,17 @@
   },
   "skills": {
     "title": "Skills",
-    "enabledCount": "{linked} of {total} enabled",
+    "attachedCount": "{attached} of {total} attached",
     "filterPlaceholder": "Filter skills…",
-    "orderHint": "Order matters — earlier skills appear earlier in the assembled prompt. Toggle to attach."
+    "orderHint": "Order matters — earlier skills appear earlier in the assembled prompt. Drag to reorder.",
+    "dragDisabled": "Clear the filter to reorder.",
+    "handleLabel": "Reorder {name} (Alt+↑ / Alt+↓)",
+    "attachLabel": "Attach {name}",
+    "globallyDisabled": "disabled — not sent to the model",
+    "empty": "No skills in this workspace yet.",
+    "emptyCta": "Go to Skills",
+    "noMatch": "No skills match the filter.",
+    "loadError": "Could not load skills."
   },
   "mount": {
     "body": "Mount point for {owner}. The Agent Editor shell + tab routing are wired by A2 — {owner} renders this tab."
