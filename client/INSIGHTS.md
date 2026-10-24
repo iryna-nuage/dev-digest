@@ -48,10 +48,45 @@ component's own.
 Where: src/components/run-cost-badge/RunCostBadge.tsx:22 · src/app/repos/[repoId]/pulls/[number]/_components/RunHistory/RunHistory.test.tsx:41
 Status: by design
 
+### 2026-10-23 · providers · Opt a mutation out of the global error toast with `meta: { silent: true }`
+What: `MutationCache.onError` in `providers.tsx` toasts every failed mutation. A UI that shows the
+error inline (the skill import drawer) would show it twice; the cache now returns early when
+`mutation.meta?.silent` is set. Only `useImportSkillPreview` uses it so far.
+Do: ALWAYS set `meta: { silent: true }` on a mutation whose error the component renders itself;
+leave it off for ordinary user actions.
+Where: src/lib/providers.tsx:45 · src/lib/hooks/skills.ts:129
+Status: by design
+
 ## Tool & Library Notes
+
+### 2026-10-24 · ui · The `Markdown` primitive renders headings and lists as plain text
+What: `@devdigest/ui` `Markdown` styles only `p`, `strong`, `code` and `a`. `styles.css` imports
+Tailwind 4, whose preflight resets `h1`–`h6` size and weight and `ul`/`ol` markers, so `# Title`
+and `- item` look like ordinary lines (the skill Preview did, before `SkillMarkdown`).
+Do: ALWAYS give react-markdown your own `h1`/`h2`/`h3`/`ul`/`ol`/`li` styles (as `SkillMarkdown`
+does) when rendering a whole Markdown document; keep `Markdown` for short inline text.
+Where: src/vendor/ui/primitives/Markdown.tsx:6 · src/vendor/ui/styles.css:1 · src/app/skills/_components/SkillDetail/_components/SkillPreviewTab/_components/SkillMarkdown/SkillMarkdown.tsx:11
+Status: by design
 
 ## Recurring Errors & Fixes
 
+### 2026-10-23 · build · A runtime import from `@devdigest/shared` passes typecheck and Vitest but breaks `next build`
+What: `src/vendor/shared/index.ts` re-exports with ESM specifiers (`./contracts/knowledge.js`).
+`tsc` and Vitest resolve them to the `.ts` files, but Next's webpack does not: the first value
+import (`formatSkillForPrompt`, `SkillType`, limits in L02) failed with "Module not found: Can't
+resolve './contracts/review-api.js'" (one line per contract file). Until L02 every client import
+from the package was `import type`, which is erased, so the problem never showed.
+Do: ALWAYS import runtime values from the contract file (`@devdigest/shared/contracts/knowledge`);
+type-only imports may keep using `@devdigest/shared`. Run `pnpm build` after adding one.
+Where: src/vendor/shared/index.ts:20 · src/lib/skill-fields.ts:14
+Status: workaround (a `webpack.resolve.extensionAlias` in next.config would fix it globally)
+
 ## Session Notes
+
+### 2026-10-23 · L02 skills (client)
+`/skills` master-detail (Config / Preview / Stats), import drawer, agent Skills tab (attach,
+drag / Alt+↑↓ reorder). Added: "`meta: { silent: true }`", "runtime import from `@devdigest/shared`
+breaks `next build`".
+Where: src/app/skills/layout.tsx:6 · src/lib/skill-fields.ts:52 · src/app/agents/[id]/_components/AgentEditor/_components/SkillsTab/SkillsTab.tsx:17
 
 ## Open Questions

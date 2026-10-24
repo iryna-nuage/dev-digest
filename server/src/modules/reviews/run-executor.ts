@@ -1,5 +1,5 @@
 import type { Container } from '../../platform/container.js';
-import type { Provider, Review, RunTrace, UnifiedDiff } from '@devdigest/shared';
+import { formatSkillForPrompt, type Provider, type Review, type RunTrace, type UnifiedDiff } from '@devdigest/shared';
 import { reviewPullRequest, countBlockers } from '@devdigest/reviewer-core';
 import { RunLogger } from '../../platform/run-logger.js';
 import * as schema from '../../db/schema.js';
@@ -46,6 +46,29 @@ export class ReviewRunExecutor {
     private repo: ReviewRepository,
     private agents: Container['agentsRepo'],
   ) {}
+
+  /**
+   * Resolve the agent's active skills into prompt blocks and log each one with
+   * its token count (streamed + persisted in the trace log). Attached but
+   * globally disabled skills are skipped silently: no prompt text, no log line.
+   */
+  private async loadSkills(workspaceId: string, agentId: string, runLog: RunLogger): Promise<string[]> {
+    const active = await this.container.skillsRepo.activeForAgent(workspaceId, agentId);
+    if (active.length === 0) {
+      runLog.info('Skills: none active');
+      return [];
+    }
+    let total = 0;
+    const blocks = active.map((skill) => {
+      const block = formatSkillForPrompt(skill);
+      const tokens = this.container.tokenizer.count(block);
+      total += tokens;
+      runLog.info(`Skill "${skill.name}" v${skill.version} attached (${tokens} tokens)`);
+      return block;
+    });
+    runLog.info(`Skills: ${active.length} active, ${total} tokens`);
+    return blocks;
+  }
 
   /**
    * Background execution of the queued agent runs (NOT awaited by the route).
@@ -183,6 +206,10 @@ export class ReviewRunExecutor {
 
       const task = taskLine(pull) + rankNote;
 
+      // L02 — skills attached to this agent AND globally enabled, in link order.
+      // Each is its own block inside `## Skills / rules`; none → section omitted.
+      const skills = await this.loadSkills(workspaceId, agent.id, runLog);
+
       // ---- Engine: assemble → single-pass → grounding -----------------------
       // The pure review pipeline lives in @devdigest/reviewer-core (shared with
       // the CI runner). The service owns only I/O: repo-intel context resolution
@@ -203,6 +230,7 @@ export class ReviewRunExecutor {
         // PR author's description/body — untrusted; assemblePrompt wraps +
         // truncates it. Omitted when the PR has no body.
         ...(pull.body ? { prDescription: pull.body } : {}),
+        ...(skills.length > 0 ? { skills } : {}),
         task,
         sessionId: `${repo.owner}/${repo.name}#${pull.number}:${agent.name}`,
         onEvent: (e) => runLog.event(e.kind, e.msg, e.data),

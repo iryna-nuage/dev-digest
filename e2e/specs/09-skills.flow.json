@@ -1,0 +1,23 @@
+{
+  "name": "Skills master-detail shows a seeded skill and the agent it is attached to",
+  "description": "L02. Loads /skills, opens the seeded skill branch-coverage-gate (Config tab), switches to Preview (the body as the agent receives it) and Stats (attached to Test Quality Reviewer), then follows Open to that agent's Skills tab, where both seeded skills are attached. Read-only: creating, editing, importing and reordering are covered by the RTL tests and server/test/skills.it.test.ts. Assumes a freshly-seeded DB (see e2e/README.md).",
+  "steps": [
+    { "cmd": ["open", "{BASE}/skills"], "label": "load the skills page" },
+    { "cmd": ["wait", "--url", "/skills"], "label": "skills route reached" },
+    { "cmd": ["wait", "--load", "networkidle"], "label": "skills fetch settles" },
+    { "cmd": ["wait", "--text", "Select a skill"], "label": "nothing selected yet" },
+    { "cmd": ["find", "text", "branch-coverage-gate", "click"], "label": "open the seeded skill card" },
+    { "cmd": ["wait", "--url", "tab=config"], "label": "skill detail opens on Config" },
+    { "cmd": ["wait", "--text", "Configuration"], "label": "Config tab renders" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Preview"], "label": "switch to the Preview tab" },
+    { "cmd": ["wait", "--url", "tab=preview"], "label": "preview tab is active in the URL" },
+    { "cmd": ["wait", "--text", "Rendered as the reviewing agent receives it."], "label": "preview subtitle" },
+    { "cmd": ["wait", "--text", "Branch coverage gate"], "label": "the skill body is rendered" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Stats"], "label": "switch to the Stats tab" },
+    { "cmd": ["wait", "--url", "tab=stats"], "label": "stats tab is active in the URL" },
+    { "cmd": ["wait", "--text", "Test Quality Reviewer"], "label": "the agent using the skill is listed" },
+    { "cmd": ["find", "role", "button", "click", "--name", "Open"], "label": "open that agent" },
+    { "cmd": ["wait", "--url", "tab=skills"], "label": "agent editor opens on its Skills tab" },
+    { "cmd": ["wait", "--text", "2 of 2 attached"], "label": "both seeded skills are attached" }
+  ]
+}

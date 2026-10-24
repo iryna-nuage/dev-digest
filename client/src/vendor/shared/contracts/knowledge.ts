@@ -115,7 +115,14 @@ export type MemoryItem = z.infer<typeof MemoryItem>;
 export const SkillType = z.enum(['rubric', 'convention', 'security', 'custom']);
 export type SkillType = z.infer<typeof SkillType>;
 
-export const SkillSource = z.enum(['manual', 'imported_url', 'extracted', 'community']);
+// 'imported_file' = an uploaded .md / .zip, stored disabled until the user vets it (L02).
+export const SkillSource = z.enum([
+  'manual',
+  'imported_url',
+  'extracted',
+  'community',
+  'imported_file',
+]);
 export type SkillSource = z.infer<typeof SkillSource>;
 
 export const Skill = z.object({
@@ -130,6 +137,76 @@ export const Skill = z.object({
   evidence_files: z.array(z.string()).nullish(),
 });
 export type Skill = z.infer<typeof Skill>;
+
+/** Field rules for a skill, enforced by the API and mirrored by the editor. */
+export const SKILL_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
+export const SKILL_NAME_MAX = 64;
+export const SKILL_DESCRIPTION_MAX = 300;
+export const SKILL_BODY_MAX = 20_000;
+
+/** Row of `GET /skills`: a skill plus how many agents attach it. */
+export const SkillListItem = Skill.extend({
+  agents_count: z.number().int(),
+});
+export type SkillListItem = z.infer<typeof SkillListItem>;
+
+/** An agent that attaches a skill (`GET /skills/:id/agents`). */
+export const SkillAgentRef = z.object({
+  id: z.string(),
+  name: z.string(),
+  enabled: z.boolean(),
+});
+export type SkillAgentRef = z.infer<typeof SkillAgentRef>;
+
+/**
+ * `GET /skills/:id/stats`: review runs of the last `window_days` whose prompt
+ * carried the skill, and those runs' findings. Findings are counted per run, not
+ * attributed to the skill: a run with two skills counts for both.
+ */
+export const SkillStats = z.object({
+  window_days: z.number().int(),
+  runs: z.number().int(),
+  findings: z.number().int(),
+  accepted: z.number().int(),
+  dismissed: z.number().int(),
+  /** accepted / (accepted + dismissed) as 0–100; null until a finding is decided. */
+  accept_rate: z.number().int().nullable(),
+});
+export type SkillStats = z.infer<typeof SkillStats>;
+
+/** Archive entry the import skipped; `executable` = script or binary, never run. */
+export const SkillImportIgnoredFile = z.object({
+  path: z.string(),
+  executable: z.boolean(),
+});
+export type SkillImportIgnoredFile = z.infer<typeof SkillImportIgnoredFile>;
+
+export const SkillImportWarning = z.object({
+  code: z.string(),
+  message: z.string(),
+});
+export type SkillImportWarning = z.infer<typeof SkillImportWarning>;
+
+/** Result of `POST /skills/import/preview`: extracted text only, nothing saved yet. */
+export const SkillImportPreview = z.object({
+  filename: z.string(),
+  name: z.string(),
+  description: z.string(),
+  type: SkillType,
+  body: z.string(),
+  ignored_files: z.array(SkillImportIgnoredFile),
+  warnings: z.array(SkillImportWarning),
+});
+export type SkillImportPreview = z.infer<typeof SkillImportPreview>;
+
+/**
+ * The text one skill contributes to a review prompt: the single definition of
+ * "what the agent receives". The server passes it to the engine; the client
+ * Preview tab renders the same string.
+ */
+export function formatSkillForPrompt(skill: Pick<Skill, 'name' | 'description' | 'body'>): string {
+  return `### Skill: ${skill.name}\n${skill.description.trim()}\n\n${skill.body.trim()}`;
+}
 
 export const CommunitySkill = z.object({
   name: z.string(),

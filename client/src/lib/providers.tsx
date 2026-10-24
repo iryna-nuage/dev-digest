@@ -38,8 +38,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
             if (status === 0 || status >= 500) notify.error(errorMessage(err));
           },
         }),
+        // `meta: { silent: true }` opts a mutation out when its UI shows the
+        // error inline (e.g. the skill import drawer).
         mutationCache: new MutationCache({
-          onError: (err) => notify.error(errorMessage(err)),
+          onError: (err, _vars, _ctx, mutation) => {
+            if (mutation.meta?.silent) return;
+            notify.error(errorMessage(err));
+          },
         }),
       })
   );
